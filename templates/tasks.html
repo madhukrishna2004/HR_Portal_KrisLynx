@@ -1,0 +1,176 @@
+{% extends "base.html" %}
+{% block title %}Tasks{% endblock %}
+{% block page_title %}Tasks{% endblock %}
+{% block page_sub %}<span id="task-count-label">Loading…</span>{% endblock %}
+{% block sidebar_key %}tasks{% endblock %}
+
+{% block topbar_actions %}
+<button id="hr-new-task" class="btn btn--primary" onclick="openModal('modal-create-task')">
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+  Assign Task
+</button>
+{% endblock %}
+
+{% block content %}
+<div class="filters">
+  <div class="tab-bar">
+    <div class="tab tab--active" onclick="setTab(this,'all')">All</div>
+    <div class="tab" onclick="setTab(this,'pending')">Pending</div>
+    <div class="tab" onclick="setTab(this,'in_progress')">In Progress</div>
+    <div class="tab" onclick="setTab(this,'completed')">Completed</div>
+  </div>
+  <select id="f-priority" class="form-control" style="width:130px" onchange="renderTasks()">
+    <option value="">All Priority</option><option value="high">High</option><option value="medium">Medium</option><option value="low">Low</option>
+  </select>
+  <div class="search-wrap" style="margin-left:auto">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+    <input id="search" class="search-input" placeholder="Search tasks…" oninput="renderTasks()"/>
+  </div>
+</div>
+
+<div class="card">
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Task</th><th>Assigned To</th><th>Priority</th><th>Progress</th><th>Deadline</th><th>Status</th><th></th></tr></thead>
+      <tbody id="tasks-tbody"></tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Create task modal -->
+<div id="modal-create-task" class="modal">
+  <div class="modal__box">
+    <div class="modal__header">
+      <div><div class="modal__title">Assign New Task</div><div class="modal__sub">Create and assign to a team member</div></div>
+      <button class="modal__close" onclick="closeModal('modal-create-task')"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+    </div>
+    <div class="modal__body">
+      <div class="form-group"><label class="form-label">Task Title *</label><input id="t-title" class="form-control" placeholder="Design homepage mockup"/></div>
+      <div class="form-group"><label class="form-label">Description</label><textarea id="t-desc" class="form-control" rows="2" placeholder="Detailed task description…"></textarea></div>
+      <div class="form-grid form-grid--2">
+        <div class="form-group"><label class="form-label">Assign To *</label><select id="t-assignee" class="form-control"><option value="">Select employee…</option></select></div>
+        <div class="form-group"><label class="form-label">Priority</label><select id="t-priority" class="form-control"><option value="medium">Medium</option><option value="high">High</option><option value="low">Low</option></select></div>
+        <div class="form-group"><label class="form-label">Start Date</label><input id="t-start" class="form-control" type="date"/></div>
+        <div class="form-group"><label class="form-label">Deadline</label><input id="t-deadline" class="form-control" type="date"/></div>
+      </div>
+      <div id="t-error" class="alert alert--error hidden"></div>
+    </div>
+    <div class="modal__footer">
+      <button class="btn btn--ghost" onclick="closeModal('modal-create-task')">Cancel</button>
+      <button id="t-btn" class="btn btn--primary" onclick="createTask()">Assign Task</button>
+    </div>
+  </div>
+</div>
+
+<!-- Update task modal -->
+<div id="modal-update-task" class="modal">
+  <div class="modal__box" style="max-width:420px">
+    <div class="modal__header">
+      <div><div class="modal__title">Update Task</div><div class="modal__sub" id="ut-subtitle"></div></div>
+      <button class="modal__close" onclick="closeModal('modal-update-task')"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+    </div>
+    <div class="modal__body">
+      <input type="hidden" id="ut-id"/>
+      <div class="form-group"><label class="form-label">Status</label>
+        <select id="ut-status" class="form-control"><option value="pending">Pending</option><option value="in_progress">In Progress</option><option value="completed">Completed</option></select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Completion — <span id="ut-prog-label">0%</span></label>
+        <input id="ut-progress" class="form-control" type="range" min="0" max="100" style="padding:6px 0;cursor:pointer" oninput="document.getElementById('ut-prog-label').textContent=this.value+'%'"/>
+      </div>
+    </div>
+    <div class="modal__footer">
+      <button class="btn btn--ghost" onclick="closeModal('modal-update-task')">Cancel</button>
+      <button class="btn btn--primary" onclick="saveUpdate()">Update Task</button>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+requireAuth();
+const isHR=Session.isHR(); const user=Session.profile();
+if(!isHR) document.getElementById("hr-new-task").style.display="none";
+document.getElementById("t-start").value=new Date().toISOString().split("T")[0];
+let allTasks=[]; let currentFilter="all";
+
+function setTab(el,filter){document.querySelectorAll(".tab").forEach(t=>t.classList.remove("tab--active"));el.classList.add("tab--active");currentFilter=filter;renderTasks();}
+
+async function loadTasks(){
+  const url=isHR?"/api/tasks":`/api/tasks?uid=${user.uid}`;
+  const d=await api(url); allTasks=d.tasks||[]; renderTasks();
+}
+
+function renderTasks(){
+  const q=document.getElementById("search").value.toLowerCase();
+  const pri=document.getElementById("f-priority").value;
+  let list=allTasks;
+  if(currentFilter!=="all") list=list.filter(t=>t.status===currentFilter);
+  if(pri) list=list.filter(t=>t.priority===pri);
+  if(q)   list=list.filter(t=>(t.title||"").toLowerCase().includes(q)||(t.assigned_name||"").toLowerCase().includes(q));
+  document.getElementById("task-count-label").textContent=`${list.length} task${list.length!==1?"s":""}`;
+  if(!list.length){document.getElementById("tasks-tbody").innerHTML=`<tr><td colspan="7"><div class="empty-state"><div class="empty-state__title">No tasks found</div></div></td></tr>`;return;}
+  document.getElementById("tasks-tbody").innerHTML=list.map(t=>{
+    const overdue=t.deadline&&new Date(t.deadline)<new Date()&&t.status!=="completed";
+    return `<tr>
+      <td><div style="font-size:13.5px;font-weight:600;max-width:200px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${escHtml(t.title)}">${escHtml(t.title)}</div>
+          <div style="font-size:11.5px;color:var(--text-muted);margin-top:2px;font-family:var(--mono)">${escHtml(t.task_id||"")}</div></td>
+      <td><div style="display:flex;align-items:center;gap:8px">${avatar(t.assigned_name||"?",28,pickGrad(t.assigned_to||""))}<span style="font-size:13px">${escHtml(t.assigned_name||"—")}</span></div></td>
+      <td>${priorityBadge(t.priority||"medium")}</td>
+      <td style="width:120px">${progressBar(t.completion||0)}<div style="font-size:11px;color:var(--text-muted);margin-top:3px;font-family:var(--mono)">${t.completion||0}%</div></td>
+      <td style="font-size:12.5px;${overdue?"color:var(--red);font-weight:600":""}">${fmtDate(t.deadline)}</td>
+      <td>${statusBadge(t.status||"pending")}</td>
+      <td><button class="btn btn--ghost btn--sm btn--icon" onclick="openUpdate('${t.id}','${escHtml(t.title||"").replace(/'/g,"\\'")}','${t.status||"pending"}',${t.completion||0})">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+      </button></td>
+    </tr>`;
+  }).join("");
+}
+
+async function loadEmpsForSelect(){
+  const d=await api("/api/employees"); const sel=document.getElementById("t-assignee");
+  (d.employees||[]).filter(e=>e.status==="active").forEach(e=>{
+    const opt=document.createElement("option");
+    opt.value=JSON.stringify({uid:e.uid,name:e.name});
+    opt.textContent=`${e.name} — ${e.department||e.position||""}`;
+    sel.appendChild(opt);
+  });
+}
+
+async function createTask(){
+  const title=document.getElementById("t-title").value.trim();
+  const asgnRaw=document.getElementById("t-assignee").value;
+  const errEl=document.getElementById("t-error"); errEl.classList.add("hidden");
+  if(!title){errEl.textContent="Task title is required.";errEl.classList.remove("hidden");return;}
+  if(!asgnRaw){errEl.textContent="Please select an assignee.";errEl.classList.remove("hidden");return;}
+  const asgn=JSON.parse(asgnRaw);
+  const btn=document.getElementById("t-btn"); btn.disabled=true; btn.textContent="Creating…";
+  const d=await api("/api/tasks","POST",{title,description:document.getElementById("t-desc").value,
+    assigned_to:asgn.uid,assigned_name:asgn.name,priority:document.getElementById("t-priority").value,
+    start_date:document.getElementById("t-start").value,deadline:document.getElementById("t-deadline").value,created_by:user.uid});
+  btn.disabled=false; btn.textContent="Assign Task";
+  if(d.ok){toast("Task assigned!");closeModal("modal-create-task");document.getElementById("t-title").value=document.getElementById("t-desc").value="";loadTasks();}
+  else{errEl.textContent=d.error||"Failed.";errEl.classList.remove("hidden");}
+}
+
+function openUpdate(id,title,status,completion){
+  document.getElementById("ut-id").value=id;
+  document.getElementById("ut-subtitle").textContent=title;
+  document.getElementById("ut-status").value=status;
+  document.getElementById("ut-progress").value=completion;
+  document.getElementById("ut-prog-label").textContent=completion+"%";
+  openModal("modal-update-task");
+}
+
+async function saveUpdate(){
+  const id=document.getElementById("ut-id").value;
+  const d=await api(`/api/tasks/${id}`,"PUT",{status:document.getElementById("ut-status").value,completion:parseInt(document.getElementById("ut-progress").value)});
+  if(d.ok){toast("Task updated");closeModal("modal-update-task");loadTasks();}
+  else toast(d.error||"Update failed","error");
+}
+
+loadTasks();
+if(isHR) loadEmpsForSelect();
+</script>
+{% endblock %}

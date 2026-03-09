@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>{{ code }} — KrisLynx HR</title>
+  <link rel="stylesheet" href="/static/css/style.css"/>
+  <style>
+    body{display:flex;align-items:center;justify-content:center;min-height:100vh}
+    .err-wrap{text-align:center;max-width:400px}
+    .err-code{font-size:96px;font-weight:900;font-family:var(--mono);background:var(--grad-a);-webkit-background-clip:text;-webkit-text-fill-color:transparent;line-height:1}
+    .err-msg{font-size:18px;font-weight:600;color:var(--text);margin-top:12px}
+    .err-sub{font-size:14px;color:var(--text-muted);margin-top:8px}
+  </style>
+</head>
+<body>
+  <div class="err-wrap fade-up">
+    <div class="err-code">{{ code }}</div>
+    <div class="err-msg">{{ message }}</div>
+    <div class="err-sub">{% if code == 404 %}The page you're looking for doesn't exist.{% else %}Something went wrong on our end.{% endif %}</div>
+    <a href="/" class="btn btn--primary" style="margin-top:28px;display:inline-flex">← Back to Home</a>
+  </div>
+</body>
+</html>

@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Sign In — KrisLynx HR Portal</title>
+  <link rel="stylesheet" href="/static/css/style.css"/>
+  <style>
+    body { background:var(--bg); display:flex; align-items:center; justify-content:center; min-height:100vh; overflow:hidden; }
+    .login-bg {
+      position:fixed; inset:0; z-index:0;
+      background-image: linear-gradient(var(--surface-2) 1px,transparent 1px),
+                        linear-gradient(90deg,var(--surface-2) 1px,transparent 1px);
+      background-size:48px 48px;
+      mask-image:radial-gradient(ellipse 80% 80% at 50% 50%,black 30%,transparent 100%);
+    }
+    .login-glow {
+      position:fixed; z-index:0; width:600px; height:600px; border-radius:50%;
+      background:radial-gradient(circle,rgba(99,102,241,.18) 0%,transparent 70%);
+      top:50%; left:50%; transform:translate(-50%,-50%); pointer-events:none;
+    }
+    .login-card {
+      position:relative; z-index:10; width:100%; max-width:420px;
+      background:var(--surface); border:1px solid var(--border); border-radius:var(--radius-lg);
+      overflow:hidden; box-shadow:0 32px 72px rgba(0,0,0,.7);
+      animation:fadeUp .5s cubic-bezier(.4,0,.2,1) both;
+    }
+    .login-card::before { content:""; display:block; height:3px; background:linear-gradient(90deg,#6366f1,#06b6d4,#8b5cf6); }
+    .login-header { padding:32px 36px 24px; border-bottom:1px solid var(--border); }
+    .login-logo { display:flex; align-items:center; gap:12px; margin-bottom:24px; }
+    .login-logo-mark { width:42px; height:42px; border-radius:12px; background:var(--grad-a);
+                       display:flex; align-items:center; justify-content:center;
+                       box-shadow:0 6px 20px rgba(99,102,241,.4); }
+    .login-logo-text { font-size:20px; font-weight:800; letter-spacing:-.5px; }
+    .login-logo-sub  { font-size:11px; color:var(--text-muted); letter-spacing:.08em; text-transform:uppercase; }
+    .login-title { font-size:22px; font-weight:800; letter-spacing:-.5px; }
+    .login-sub   { font-size:13px; color:var(--text-muted); margin-top:4px; }
+    .role-tabs { display:grid; grid-template-columns:1fr 1fr; gap:6px; padding:6px;
+                 background:var(--surface-2); border-radius:var(--radius-sm); border:1px solid var(--border); }
+    .role-tab { padding:9px; border-radius:7px; text-align:center; font-size:13px; font-weight:600;
+                color:var(--text-muted); cursor:pointer; transition:var(--transition); border:1px solid transparent; }
+    .role-tab--active { background:var(--surface); color:var(--indigo-hi); border-color:var(--border-hi); }
+    .login-body { padding:24px 36px 32px; display:flex; flex-direction:column; gap:16px; }
+    .pwd-wrap { position:relative; }
+    .eye-btn  { position:absolute; right:12px; top:50%; transform:translateY(-50%); color:var(--text-dim); cursor:pointer; padding:4px; }
+    .eye-btn:hover { color:var(--text-muted); }
+    .login-footer { text-align:center; font-size:12px; color:var(--text-dim); padding-top:4px; }
+    @keyframes fadeUp { from{opacity:0;transform:translateY(24px) scale(.98)} to{opacity:1;transform:translateY(0) scale(1)} }
+  </style>
+</head>
+<body>
+  <div class="login-bg"></div>
+  <div class="login-glow"></div>
+
+  <div class="login-card">
+    <div class="login-header">
+      <div class="login-logo">
+        <div class="login-logo-mark">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.2">
+            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+            <circle cx="9" cy="7" r="4"/>
+            <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+            <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+          </svg>
+        </div>
+        <div>
+          <div class="login-logo-text">KrisLynx LLP</div>
+          <div class="login-logo-sub">HR Portal</div>
+        </div>
+      </div>
+      <div class="login-title">Welcome back</div>
+      <div class="login-sub">Sign in to your workspace</div>
+    </div>
+
+    <div class="login-body">
+      <div>
+        <div class="form-label" style="margin-bottom:8px">Signing in as</div>
+        <div class="role-tabs">
+          <div class="role-tab role-tab--active" id="tab-emp" onclick="setRole('employee')">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display:inline;margin-bottom:-2px;margin-right:4px"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
+            Employee
+          </div>
+          <div class="role-tab" id="tab-hr" onclick="setRole('hr')">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display:inline;margin-bottom:-2px;margin-right:4px"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+            HR / Admin
+          </div>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Email address</label>
+        <input id="email" type="email" class="form-control" placeholder="you@krislynx.com" autocomplete="email"/>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Password</label>
+        <div class="pwd-wrap">
+          <input id="password" type="password" class="form-control" placeholder="••••••••" autocomplete="current-password" style="padding-right:42px"/>
+          <span class="eye-btn" onclick="togglePwd()">
+            <svg id="eye-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>
+            </svg>
+          </span>
+        </div>
+      </div>
+
+      <div id="error-msg" class="alert alert--error hidden"></div>
+
+      <button id="login-btn" class="btn btn--primary" style="width:100%;justify-content:center;padding:11px" onclick="handleLogin()">
+        <span id="btn-label">Sign In</span>
+        <span id="btn-spin" class="spinner hidden"></span>
+      </button>
+
+      <div class="login-footer">Forgot your password? Contact HR to reset it.</div>
+    </div>
+  </div>
+
+  <!-- Firebase SDK (loaded as module) -->
+  <script type="module">
+    import { initializeApp }                        from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+    import { getAuth, signInWithEmailAndPassword }  from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+
+    // Config injected server-side from environment variables
+    const config = {{ firebase_config | safe }};
+
+    const fireApp  = initializeApp(config);
+    const fireAuth = getAuth(fireApp);
+    window._fbAuth   = fireAuth;
+    window._fbSignIn = signInWithEmailAndPassword;
+  </script>
+
+  <script>
+    let selectedRole = "employee";
+
+    function setRole(role) {
+      selectedRole = role;
+      document.getElementById("tab-emp").classList.toggle("role-tab--active", role === "employee");
+      document.getElementById("tab-hr").classList.toggle("role-tab--active",  role === "hr");
+    }
+
+    function togglePwd() {
+      const i = document.getElementById("password");
+      i.type = i.type === "password" ? "text" : "password";
+    }
+
+    function setLoading(on) {
+      document.getElementById("btn-label").textContent = on ? "Signing in…" : "Sign In";
+      document.getElementById("btn-spin").classList.toggle("hidden", !on);
+      document.getElementById("login-btn").disabled = on;
+    }
+
+    function showError(msg) {
+      const el = document.getElementById("error-msg");
+      el.textContent = msg; el.classList.remove("hidden");
+    }
+
+    async function handleLogin() {
+      const email    = document.getElementById("email").value.trim();
+      const password = document.getElementById("password").value;
+      document.getElementById("error-msg").classList.add("hidden");
+      if (!email || !password) { showError("Please enter your email and password."); return; }
+
+      setLoading(true);
+      try {
+        const cred    = await window._fbSignIn(window._fbAuth, email, password);
+        const idToken = await cred.user.getIdToken();
+
+        const res  = await fetch("/api/auth/session", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ idToken }),
+        });
+        const data = await res.json();
+        if (!data.ok) { showError(data.error || "Authentication failed."); return; }
+
+        localStorage.setItem("kl_profile", JSON.stringify(data.profile));
+        localStorage.setItem("kl_role",    data.role || selectedRole);
+        localStorage.setItem("kl_token",   idToken);
+        localStorage.setItem("kl_token_ts", Date.now().toString());
+
+        const role = data.role || selectedRole;
+        window.location.href = (role === "hr" || role === "admin") ? "/hr/dashboard" : "/employee/dashboard";
+      } catch(err) {
+        const map = {
+          "auth/invalid-credential":    "Incorrect email or password.",
+          "auth/user-disabled":         "This account has been disabled.",
+          "auth/too-many-requests":     "Too many attempts. Try again later.",
+          "auth/network-request-failed":"Network error. Check your connection.",
+        };
+        showError(map[err.code] || err.message || "Sign-in failed.");
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    document.addEventListener("keydown", e => { if (e.key === "Enter") handleLogin(); });
+  </script>
+</body>
+</html>

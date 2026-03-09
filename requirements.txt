@@ -1,0 +1,13 @@
+# KrisLynx LLP HR Portal – Python dependencies
+# Tested with Python 3.11+
+
+# Web framework
+Flask==3.0.3
+gunicorn==22.0.0
+
+# Firebase
+firebase-admin==6.5.0
+
+# Security & utilities
+python-dotenv==1.0.1
+Werkzeug==3.0.3

@@ -1,0 +1,187 @@
+{% extends "base.html" %}
+{% block title %}Projects{% endblock %}
+{% block page_title %}Projects{% endblock %}
+{% block page_sub %}<span id="proj-count-label">Loading…</span>{% endblock %}
+{% block sidebar_key %}projects{% endblock %}
+
+{% block topbar_actions %}
+<button id="hr-new-proj" class="btn btn--primary" onclick="openModal('modal-create-proj')">
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+  New Project
+</button>
+{% endblock %}
+
+{% block content %}
+<div class="filters">
+  <div class="tab-bar" id="status-tabs">
+    <div class="tab tab--active" onclick="setTab(this,'all')">All</div>
+    <div class="tab" onclick="setTab(this,'active')">Active</div>
+    <div class="tab" onclick="setTab(this,'completed')">Completed</div>
+    <div class="tab" onclick="setTab(this,'on_hold')">On Hold</div>
+  </div>
+  <div class="search-wrap" style="margin-left:auto">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+    <input id="search" class="search-input" placeholder="Search projects…" oninput="renderProjects()"/>
+  </div>
+</div>
+<div id="proj-grid" class="proj-grid"></div>
+
+<!-- Create project modal -->
+<div id="modal-create-proj" class="modal">
+  <div class="modal__box" style="max-width:560px">
+    <div class="modal__header">
+      <div><div class="modal__title">Create New Project</div><div class="modal__sub">Define scope and assign team members</div></div>
+      <button class="modal__close" onclick="closeModal('modal-create-proj')"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+    </div>
+    <div class="modal__body">
+      <div class="form-group"><label class="form-label">Project Name *</label><input id="p-name" class="form-control" placeholder="Q4 Marketing Campaign"/></div>
+      <div class="form-group"><label class="form-label">Description</label><textarea id="p-desc" class="form-control" rows="3" placeholder="Project goals and scope…"></textarea></div>
+      <div class="form-grid form-grid--2">
+        <div class="form-group"><label class="form-label">Start Date</label><input id="p-start" class="form-control" type="date"/></div>
+        <div class="form-group"><label class="form-label">Deadline</label><input id="p-deadline" class="form-control" type="date"/></div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Assign Employees</label>
+        <div id="emp-checklist" style="background:var(--surface-2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:12px;max-height:180px;overflow-y:auto;display:flex;flex-direction:column;gap:8px">
+          <div class="text-muted text-sm">Loading employees…</div>
+        </div>
+      </div>
+      <div id="p-error" class="alert alert--error hidden"></div>
+    </div>
+    <div class="modal__footer">
+      <button class="btn btn--ghost" onclick="closeModal('modal-create-proj')">Cancel</button>
+      <button id="p-btn" class="btn btn--primary" onclick="createProject()">Create Project</button>
+    </div>
+  </div>
+</div>
+
+<!-- Edit project modal -->
+<div id="modal-edit-proj" class="modal">
+  <div class="modal__box" style="max-width:480px">
+    <div class="modal__header">
+      <div><div class="modal__title">Edit Project</div><div class="modal__sub" id="ep-subtitle"></div></div>
+      <button class="modal__close" onclick="closeModal('modal-edit-proj')"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+    </div>
+    <div class="modal__body">
+      <input type="hidden" id="ep-id"/>
+      <div class="form-group"><label class="form-label">Name</label><input id="ep-name" class="form-control"/></div>
+      <div class="form-group"><label class="form-label">Description</label><textarea id="ep-desc" class="form-control" rows="2"></textarea></div>
+      <div class="form-grid form-grid--2">
+        <div class="form-group"><label class="form-label">Deadline</label><input id="ep-deadline" class="form-control" type="date"/></div>
+        <div class="form-group"><label class="form-label">Status</label>
+          <select id="ep-status" class="form-control"><option value="active">Active</option><option value="completed">Completed</option><option value="on_hold">On Hold</option><option value="cancelled">Cancelled</option></select>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Progress — <span id="ep-prog-label">0%</span></label>
+        <input id="ep-progress" class="form-control" type="range" min="0" max="100" style="padding:6px 0;cursor:pointer" oninput="document.getElementById('ep-prog-label').textContent=this.value+'%'"/>
+      </div>
+    </div>
+    <div class="modal__footer">
+      <button class="btn btn--ghost" onclick="closeModal('modal-edit-proj')">Cancel</button>
+      <button class="btn btn--primary" onclick="saveEditProj()">Save Changes</button>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+requireAuth();
+const isHR=Session.isHR(); const user=Session.profile();
+if(!isHR) document.getElementById("hr-new-proj").style.display="none";
+document.getElementById("p-start").value=new Date().toISOString().split("T")[0];
+let allProjs=[]; let allEmps=[]; let currentFilter="all";
+const ACCENTS=["var(--grad-a)","var(--grad-b)","var(--grad-c)","linear-gradient(135deg,#f59e0b,#ef4444)","linear-gradient(135deg,#ec4899,#8b5cf6)"];
+
+function setTab(el,filter){document.querySelectorAll(".tab").forEach(t=>t.classList.remove("tab--active"));el.classList.add("tab--active");currentFilter=filter;renderProjects();}
+
+async function loadProjects(){
+  const url=isHR?"/api/projects":`/api/projects?uid=${user.uid}`;
+  const d=await api(url); allProjs=d.projects||[]; renderProjects();
+}
+
+function renderProjects(){
+  const q=document.getElementById("search").value.toLowerCase();
+  let list=allProjs;
+  if(currentFilter!=="all") list=list.filter(p=>p.status===currentFilter);
+  if(q) list=list.filter(p=>(p.name||"").toLowerCase().includes(q)||(p.description||"").toLowerCase().includes(q));
+  document.getElementById("proj-count-label").textContent=`${list.length} project${list.length!==1?"s":""}`;
+  const grid=document.getElementById("proj-grid");
+  if(!list.length){grid.innerHTML=`<div class="empty-state" style="grid-column:1/-1"><svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/></svg><div class="empty-state__title">No projects found</div></div>`;return;}
+  grid.innerHTML=list.map((p,i)=>{
+    const assigned=(p.assigned_employees||[]);
+    const overdue=p.deadline&&new Date(p.deadline)<new Date()&&p.status!=="completed";
+    const empAvatars=assigned.slice(0,4).map(uid=>{
+      const e=allEmps.find(x=>x.uid===uid);
+      return `<div class="avatar" style="width:26px;height:26px;font-size:10px;background:${pickGrad(uid)};border:2px solid var(--surface)">${initials(e?.name||"?")}</div>`;
+    }).join("");
+    const extra=assigned.length>4?`<div class="avatar" style="width:26px;height:26px;font-size:10px;background:var(--surface-3);border:2px solid var(--surface);color:var(--text-muted)">+${assigned.length-4}</div>`:"";
+    return `<div class="proj-card fade-up" style="animation-delay:${i*.05}s">
+      <div class="proj-card__accent" style="background:${ACCENTS[i%ACCENTS.length]}"></div>
+      <div><div class="proj-card__id">${escHtml(p.project_id||"")}</div><div class="proj-card__name">${escHtml(p.name)}</div></div>
+      <div class="proj-card__desc">${escHtml(p.description||"No description.")}</div>
+      <div>${progressBar(p.progress||0)}</div>
+      <div class="proj-card__meta"><span>Started ${fmtDate(p.start_date)}</span><span ${overdue?"style='color:var(--red);font-weight:600'":""}>Due ${fmtDate(p.deadline)}</span></div>
+      <div class="proj-card__footer">
+        <div class="avatar-stack">${empAvatars}${extra}</div>
+        <div style="display:flex;align-items:center;gap:8px">
+          ${statusBadge(p.status||"active")}
+          ${isHR?`<button class="btn btn--ghost btn--sm btn--icon" onclick="openEditProj('${p.id}')"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>`:""}
+        </div>
+      </div>
+    </div>`;
+  }).join("");
+}
+
+async function loadEmpsForChecklist(){
+  const d=await api("/api/employees"); allEmps=d.employees||[];
+  const c=document.getElementById("emp-checklist");
+  if(!allEmps.length){c.innerHTML=`<div class="text-muted text-sm">No employees found</div>`;return;}
+  c.innerHTML=allEmps.map(e=>`
+    <label style="display:flex;align-items:center;gap:10px;cursor:pointer;padding:4px 0">
+      <input type="checkbox" class="emp-cb" value="${e.uid}" style="accent-color:var(--indigo);width:14px;height:14px"/>
+      ${avatar(e.name||"?",26,pickGrad(e.uid||""))}
+      <span style="font-size:13px;font-weight:500">${escHtml(e.name||e.email)}</span>
+      <span class="text-muted text-xs" style="margin-left:auto">${escHtml(e.department||"")}</span>
+    </label>`).join("");
+}
+
+async function createProject(){
+  const name=document.getElementById("p-name").value.trim();
+  const errEl=document.getElementById("p-error"); errEl.classList.add("hidden");
+  if(!name){errEl.textContent="Project name is required.";errEl.classList.remove("hidden");return;}
+  const assigned=[...document.querySelectorAll(".emp-cb:checked")].map(c=>c.value);
+  const btn=document.getElementById("p-btn"); btn.disabled=true; btn.textContent="Creating…";
+  const d=await api("/api/projects","POST",{name,description:document.getElementById("p-desc").value,
+    start_date:document.getElementById("p-start").value,deadline:document.getElementById("p-deadline").value,
+    assigned_employees:assigned,created_by:user.uid});
+  btn.disabled=false; btn.textContent="Create Project";
+  if(d.ok){toast("Project created!");closeModal("modal-create-proj");document.getElementById("p-name").value=document.getElementById("p-desc").value="";loadProjects();}
+  else{errEl.textContent=d.error||"Failed.";errEl.classList.remove("hidden");}
+}
+
+function openEditProj(id){
+  const p=allProjs.find(x=>x.id===id); if(!p)return;
+  document.getElementById("ep-id").value=id;
+  document.getElementById("ep-subtitle").textContent=p.project_id||"";
+  document.getElementById("ep-name").value=p.name||"";
+  document.getElementById("ep-desc").value=p.description||"";
+  document.getElementById("ep-deadline").value=p.deadline||"";
+  document.getElementById("ep-status").value=p.status||"active";
+  document.getElementById("ep-progress").value=p.progress||0;
+  document.getElementById("ep-prog-label").textContent=(p.progress||0)+"%";
+  openModal("modal-edit-proj");
+}
+
+async function saveEditProj(){
+  const id=document.getElementById("ep-id").value;
+  const d=await api(`/api/projects/${id}`,"PUT",{name:document.getElementById("ep-name").value,description:document.getElementById("ep-desc").value,deadline:document.getElementById("ep-deadline").value,status:document.getElementById("ep-status").value,progress:parseInt(document.getElementById("ep-progress").value)});
+  if(d.ok){toast("Project updated");closeModal("modal-edit-proj");loadProjects();}
+  else toast(d.error||"Update failed","error");
+}
+
+loadProjects();
+if(isHR) loadEmpsForChecklist();
+</script>
+{% endblock %}

@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta name="robots" content="noindex, nofollow"/>
+  <title>{% block title %}KrisLynx HR{% endblock %} — KrisLynx HR Portal</title>
+  <link rel="stylesheet" href="/static/css/style.css"/>
+  {% block head_extra %}{% endblock %}
+</head>
+<body>
+<div class="app-shell">
+  <div id="sidebar-mount"></div>
+
+  <div class="main-content">
+
+    <!-- Topbar -->
+    <div class="topbar">
+      <div class="topbar__left">
+        <div class="topbar__title">{% block page_title %}{% endblock %}</div>
+        <div class="topbar__sub" id="topbar-sub">{% block page_sub %}{% endblock %}</div>
+      </div>
+      <div class="topbar__right" id="topbar-actions">
+        {% block topbar_actions %}{% endblock %}
+      </div>
+    </div>
+
+    <!-- Page body -->
+    <div class="page-body">
+      {% block content %}{% endblock %}
+    </div>
+
+  </div>
+</div>
+
+<!-- Firebase Auth SDK (for token refresh on all pages) -->
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+  import { getAuth }       from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+  const config   = {{ firebase_config | safe }};
+  const fireApp  = initializeApp(config);
+  window._fbAuth = getAuth(fireApp);
+</script>
+
+<script src="/static/js/shared.js"></script>
+
+<script>
+  // Build sidebar — activeKey is set by each page
+  document.getElementById("sidebar-mount").innerHTML = buildSidebar("{% block sidebar_key %}{% endblock %}");
+</script>
+
+{% block scripts %}{% endblock %}
+</body>
+</html>
