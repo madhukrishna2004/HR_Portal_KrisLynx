@@ -36,7 +36,7 @@ limit_request_fields = 100
 
 # ── Lifecycle hooks ────────────────────────────────────────────────────────────
 def on_starting(server):
-    print("🚀  Gunicorn starting — KrisLynx HR Portal")
+    print(">  Gunicorn starting — KrisLynx HR Portal")
 
 def post_fork(server, worker):
     """Re-initialize Firebase in each forked worker process."""

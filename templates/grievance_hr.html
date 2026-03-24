@@ -1,0 +1,105 @@
+{% extends "base.html" %}
+{% block title %}Grievance Cell{% endblock %}
+{% block page_title %}Grievance Management{% endblock %}
+{% block page_sub %}Review and resolve employee complaints{% endblock %}
+{% block sidebar_key %}grievance{% endblock %}
+
+{% block content %}
+<div class="tabs fade-up">
+  <button class="tab tab--active" onclick="filterComplaints('all', this)">All</button>
+  <button class="tab" onclick="filterComplaints('open', this)">Open</button>
+  <button class="tab" onclick="filterComplaints('resolved', this)">Resolved</button>
+  <button class="tab" onclick="filterComplaints('closed', this)">Closed</button>
+</div>
+
+<div class="card fade-up delay-1">
+  <div class="card__body">
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>ID</th><th>Employee</th><th>Category</th><th>Subject</th><th>Priority</th><th>Status</th><th>Date</th><th>Action</th></tr></thead>
+        <tbody id="complaints-table"><tr><td colspan="8"><div class="loading-spinner"></div></td></tr></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- Respond Modal -->
+<div class="modal-overlay" id="respond-modal">
+  <div class="modal-box">
+    <div class="modal-header"><h3>Respond to Complaint</h3><button class="modal-close" onclick="closeModal('respond-modal')">&times;</button></div>
+    <div class="modal-body">
+      <div id="complaint-detail"></div>
+      <div class="form-group mt-16"><label class="form-label">Your Response</label><textarea class="form-textarea" id="r-text" rows="4" placeholder="Type your response..."></textarea></div>
+      <div class="form-group"><label class="form-label">Update Status</label>
+        <select class="form-select" id="r-status"><option value="open">Open</option><option value="resolved">Resolved</option><option value="closed">Closed</option></select>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn--secondary" onclick="closeModal('respond-modal')">Cancel</button>
+      <button class="btn btn--primary" onclick="submitResponse()">Send Response</button>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+if (!requireHR()) throw "auth";
+let allComplaints = [];
+let currentId = null;
+
+function loadComplaints() {
+  api("/api/complaints").then(d => {
+    if (!d.ok) return;
+    allComplaints = d.complaints || [];
+    renderComplaints(allComplaints);
+  });
+}
+
+function renderComplaints(list) {
+  const el = document.getElementById("complaints-table");
+  if (!list.length) { el.innerHTML = '<tr><td colspan="8" class="text-center text-muted" style="padding:30px">No complaints</td></tr>'; return; }
+  el.innerHTML = list.map(c => `
+    <tr>
+      <td class="text-mono text-xs">${escHtml(c.complaint_id)}</td>
+      <td><div class="d-flex items-center gap-8">${avatar(c.submitted_name,28)}<span style="font-weight:600">${escHtml(c.submitted_name)}</span></div></td>
+      <td><span class="badge badge--indigo">${escHtml(c.category?.toUpperCase())}</span></td>
+      <td style="font-weight:600">${escHtml(c.subject)}</td>
+      <td>${priorityBadge(c.priority)}</td>
+      <td>${statusBadge(c.status)}</td>
+      <td class="text-xs text-muted">${fmtDate(c.created_at)}</td>
+      <td><button class="btn btn--ghost btn--sm" onclick="openRespond('${c.id}')">Respond</button></td>
+    </tr>`).join("");
+}
+
+function filterComplaints(status, btn) {
+  document.querySelectorAll(".tab").forEach(t => t.classList.remove("tab--active"));
+  btn.classList.add("tab--active");
+  renderComplaints(status === "all" ? allComplaints : allComplaints.filter(c => c.status === status));
+}
+
+function openRespond(id) {
+  currentId = id;
+  const c = allComplaints.find(x => x.id === id);
+  if (!c) return;
+  document.getElementById("complaint-detail").innerHTML = `
+    <div style="padding:14px;background:var(--bg-alt);border-radius:10px">
+      <div style="font-weight:700">${escHtml(c.subject)}</div>
+      <div class="text-sm text-muted mt-8">${escHtml(c.description)}</div>
+      ${(c.responses||[]).map(r => `<div style="margin-top:10px;padding:8px 12px;background:var(--primary-bg);border-radius:8px;font-size:13px"><strong>${escHtml(r.by)}</strong>: ${escHtml(r.text)} <span class="text-xs text-muted">${timeAgo(r.at)}</span></div>`).join("")}
+    </div>`;
+  document.getElementById("r-status").value = c.status;
+  openModal("respond-modal");
+}
+
+async function submitResponse() {
+  const text = document.getElementById("r-text").value.trim();
+  const status = document.getElementById("r-status").value;
+  if (!text) { toast("Response text required", "warn"); return; }
+  const res = await api(`/api/complaints/${currentId}`, "PUT", { response: text, status, responded_by: "HR Admin" });
+  if (res.ok) { toast("Response sent", "success"); closeModal("respond-modal"); loadComplaints(); }
+  else toast(res.error || "Failed", "error");
+}
+loadComplaints();
+</script>
+{% endblock %}

@@ -1,27 +1,27 @@
 services:
   - type: web
-    name: krislynxllp-hr-portal
+    name: lynxport
     env: python
-    region: singapore   # change to: oregon, frankfurt, ohio as needed
-    plan: free           # upgrade to starter ($7/mo) for always-on
-
+    region: singapore
+    plan: free
     buildCommand: pip install -r requirements.txt
-    startCommand: gunicorn app:app --config gunicorn.conf.py
-
-    healthCheckPath: /health
-
+    startCommand: gunicorn app:app --bind 0.0.0.0:$PORT --workers 2 --timeout 120
     envVars:
       - key: FLASK_ENV
         value: production
       - key: SECRET_KEY
-        generateValue: true          # Render auto-generates a secure random value
+        generateValue: true
+      - key: FIREBASE_API_KEY
+        sync: false
+      - key: FIREBASE_AUTH_DOMAIN
+        sync: false
       - key: FIREBASE_PROJECT_ID
-        value: miyraa-59c25
+        sync: false
       - key: FIREBASE_STORAGE_BUCKET
-        value: miyraa-59c25.appspot.com
-      # ─── Set these manually in Render Dashboard after deploy ─────────────────
-      # FIREBASE_SERVICE_ACCOUNT_JSON  →  paste full JSON content of serviceAccountKey.json
-      # FIREBASE_API_KEY               →  from Firebase Console → Project Settings
-      # FIREBASE_AUTH_DOMAIN           →  miyraa-59c25.firebaseapp.com
-      # FIREBASE_MESSAGING_SENDER_ID   →  from Firebase Console
-      # FIREBASE_APP_ID                →  from Firebase Console
+        sync: false
+      - key: FIREBASE_MESSAGING_SENDER_ID
+        sync: false
+      - key: FIREBASE_APP_ID
+        sync: false
+      - key: FIREBASE_SERVICE_ACCOUNT_JSON
+        sync: false

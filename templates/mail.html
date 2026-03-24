@@ -1,0 +1,170 @@
+{% extends "base.html" %}
+{% block title %}Mail Center{% endblock %}
+{% block page_title %}Mail Center{% endblock %}
+{% block page_sub %}Compose and send emails to employees{% endblock %}
+{% block sidebar_key %}mail{% endblock %}
+
+{% block content %}
+<div class="dashboard-grid--equal fade-up" style="display:grid;grid-template-columns:1fr 1fr;gap:22px">
+  <!-- Compose -->
+  <div class="card">
+    <div class="card__header"><div class="card__title">Compose Mail</div></div>
+    <div class="card__body">
+      <div class="form-group">
+        <label class="form-label">Template</label>
+        <select class="form-select" id="mail-template" onchange="applyTemplate()">
+          <option value="custom">Custom Message</option>
+          <option value="task_assign">Task Assignment</option>
+          <option value="task_complete">Task Completion</option>
+          <option value="payslip">Payslip Notification</option>
+          <option value="welcome">Welcome Mail</option>
+          <option value="announcement">Announcement</option>
+          <option value="leave_approved">Leave Approved</option>
+          <option value="leave_rejected">Leave Rejected</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Recipients</label>
+        <div class="d-flex gap-8 mb-8">
+          <button class="btn btn--ghost btn--sm" onclick="selectAllRecipients()">Select All</button>
+          <button class="btn btn--ghost btn--sm" onclick="clearRecipients()">Clear</button>
+        </div>
+        <div class="chip-group" id="recipient-chips" style="max-height:120px;overflow-y:auto"></div>
+        <div id="selected-count" class="text-xs text-muted mt-8">0 selected</div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Subject</label>
+        <input class="form-input" id="mail-subject" placeholder="Email subject...">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Body</label>
+        <textarea class="form-textarea" id="mail-body" rows="8" placeholder="Type your message here..."></textarea>
+      </div>
+      <button class="btn btn--primary w-full" onclick="sendMail()">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+        Send Mail
+      </button>
+    </div>
+  </div>
+
+  <!-- Mail History -->
+  <div class="card">
+    <div class="card__header"><div class="card__title">Sent Mails</div></div>
+    <div class="card__body" id="mail-history" style="max-height:600px;overflow-y:auto">
+      <div class="loading-spinner"></div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+if (!requireHR()) throw "auth";
+
+let allEmployees = [];
+let selectedRecipients = new Set();
+
+const TEMPLATES = {
+  task_assign:    { subject: "New Task Assigned — {task}", body: "Dear {name},\n\nYou have been assigned a new task: {task}.\n\nPlease check your LynxPort dashboard for details.\n\nBest regards,\nHR Team — KrisLynx LLP" },
+  task_complete:  { subject: "Task Completed — {task}", body: "Dear Team,\n\n{name} has completed the task: {task}.\n\nThank you for your hard work.\n\nBest regards,\nHR Team" },
+  payslip:        { subject: "Payslip for {month} — KrisLynx LLP", body: "Dear {name},\n\nYour payslip for {month} has been generated and is available on your LynxPort dashboard.\n\nPlease review it at your convenience.\n\nBest regards,\nHR & Payroll Team" },
+  welcome:        { subject: "Welcome to KrisLynx LLP!", body: "Dear {name},\n\nWelcome to the KrisLynx family! \n\nWe are thrilled to have you on board. Your LynxPort account has been set up and you can log in to explore your dashboard, view tasks, and connect with the team.\n\nIf you have any questions, don't hesitate to reach out.\n\nWarm regards,\nHR Team — KrisLynx LLP" },
+  announcement:   { subject: "Important Announcement — KrisLynx LLP", body: "Dear Team,\n\n[Your announcement here]\n\nPlease feel free to reach out with any questions.\n\nBest regards,\nHR Team" },
+  leave_approved: { subject: "Leave Request Approved", body: "Dear {name},\n\nYour leave request has been approved.\n\nPlease ensure all pending tasks are delegated appropriately.\n\nBest regards,\nHR Team" },
+  leave_rejected: { subject: "Leave Request — Action Required", body: "Dear {name},\n\nUnfortunately, your leave request could not be approved at this time. Please reach out to HR for more details.\n\nBest regards,\nHR Team" },
+};
+
+// Load employees for recipient selection
+api("/api/employees").then(d => {
+  if (!d.ok) return;
+  allEmployees = (d.employees || []).filter(e => e.status === "active");
+  renderChips();
+});
+
+function renderChips() {
+  const el = document.getElementById("recipient-chips");
+  el.innerHTML = allEmployees.map(e => `
+    <div class="chip ${selectedRecipients.has(e.uid)?'chip--selected':''}" onclick="toggleRecipient('${e.uid}', this)">
+      ${escHtml(e.name)}
+    </div>
+  `).join("");
+  document.getElementById("selected-count").textContent = `${selectedRecipients.size} selected`;
+}
+
+function toggleRecipient(uid, el) {
+  if (selectedRecipients.has(uid)) { selectedRecipients.delete(uid); el.classList.remove("chip--selected"); }
+  else { selectedRecipients.add(uid); el.classList.add("chip--selected"); }
+  document.getElementById("selected-count").textContent = `${selectedRecipients.size} selected`;
+}
+
+function selectAllRecipients() {
+  allEmployees.forEach(e => selectedRecipients.add(e.uid));
+  renderChips();
+}
+
+function clearRecipients() {
+  selectedRecipients.clear();
+  renderChips();
+}
+
+function applyTemplate() {
+  const key = document.getElementById("mail-template").value;
+  if (key === "custom") return;
+  const t = TEMPLATES[key];
+  if (t) {
+    document.getElementById("mail-subject").value = t.subject;
+    document.getElementById("mail-body").value = t.body;
+  }
+}
+
+async function sendMail() {
+  if (selectedRecipients.size === 0) { toast("Select at least one recipient", "warn"); return; }
+  const subject = document.getElementById("mail-subject").value.trim();
+  const body = document.getElementById("mail-body").value.trim();
+  if (!subject || !body) { toast("Subject and body required", "warn"); return; }
+
+  const recipients = allEmployees.filter(e => selectedRecipients.has(e.uid)).map(e => ({uid: e.uid, name: e.name, email: e.email}));
+
+  const res = await api("/api/mail/send", "POST", {
+    recipients, subject, body,
+    template: document.getElementById("mail-template").value,
+    sent_by: Session.profile().uid,
+  });
+
+  if (res.ok) {
+    var msg = "Mail sent to " + (res.sent_count || 0) + " of " + recipients.length + " recipients";
+    if (res.failed_count > 0) msg += " (" + res.failed_count + " failed)";
+    toast(msg, res.failed_count > 0 ? "warn" : "success");
+    document.getElementById("mail-subject").value = "";
+    document.getElementById("mail-body").value = "";
+    selectedRecipients.clear();
+    renderChips();
+    loadMailHistory();
+  } else {
+    toast(res.error || "Failed to send", "error");
+  }
+}
+
+function loadMailHistory() {
+  api("/api/mail/logs").then(d => {
+    const el = document.getElementById("mail-history");
+    if (!d.ok || !d.mails?.length) {
+      el.innerHTML = '<div class="empty-state"><div class="empty-state__icon"></div><div class="empty-state__text">No mails sent yet</div></div>';
+      return;
+    }
+    el.innerHTML = d.mails.map(m => `
+      <div style="padding:14px 0;border-bottom:1px solid var(--border)">
+        <div class="d-flex items-center justify-between">
+          <div style="font-weight:600;font-size:13.5px;color:var(--text)">${escHtml(m.subject)}</div>
+          ${statusBadge(m.status)}
+        </div>
+        <div class="text-xs text-muted mt-8">
+          To: ${(m.recipients||[]).map(r=>escHtml(r.name||r.email)).join(", ").substring(0,80)} · ${timeAgo(m.sent_at)}
+        </div>
+      </div>
+    `).join("");
+  });
+}
+loadMailHistory();
+</script>
+{% endblock %}

@@ -1,0 +1,110 @@
+{% extends "base.html" %}
+{% block title %}Leave Management{% endblock %}
+{% block page_title %}Leave Management{% endblock %}
+{% block page_sub %}Review and manage employee leave requests{% endblock %}
+{% block sidebar_key %}leave{% endblock %}
+
+{% block content %}
+<div class="stat-grid fade-up">
+  <div class="stat-card stat-card--amber"><div class="stat-card__label">Pending</div><div class="stat-card__value" id="s-pending">--</div></div>
+  <div class="stat-card stat-card--green"><div class="stat-card__label">Approved</div><div class="stat-card__value" id="s-approved">--</div></div>
+  <div class="stat-card stat-card--red"><div class="stat-card__label">Rejected</div><div class="stat-card__value" id="s-rejected">--</div></div>
+</div>
+
+<div class="tabs fade-up delay-1">
+  <button class="tab tab--active" onclick="filterLeaves('all', this)">All</button>
+  <button class="tab" onclick="filterLeaves('pending', this)">Pending</button>
+  <button class="tab" onclick="filterLeaves('approved', this)">Approved</button>
+  <button class="tab" onclick="filterLeaves('rejected', this)">Rejected</button>
+</div>
+
+<div class="card fade-up delay-2">
+  <div class="card__body">
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Employee</th><th>Type</th><th>From</th><th>To</th><th>Days</th><th>Reason</th><th>Status</th><th>Actions</th></tr></thead>
+        <tbody id="leave-table"><tr><td colspan="8"><div class="loading-spinner"></div></td></tr></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+if (!requireHR()) throw "auth";
+
+let allLeaves = [];
+let currentFilter = "all";
+
+function loadLeaves() {
+  api("/api/leave").then(d => {
+    if (!d.ok) return;
+    allLeaves = d.leaves || [];
+    var pending = allLeaves.filter(l => l.status === "pending").length;
+    var approved = allLeaves.filter(l => l.status === "approved").length;
+    var rejected = allLeaves.filter(l => l.status === "rejected").length;
+    document.getElementById("s-pending").textContent = pending;
+    document.getElementById("s-approved").textContent = approved;
+    document.getElementById("s-rejected").textContent = rejected;
+    renderLeaves(allLeaves);
+  });
+}
+
+function renderLeaves(list) {
+  var el = document.getElementById("leave-table");
+  if (!list.length) {
+    el.innerHTML = '<tr><td colspan="8" class="text-center text-muted" style="padding:30px">No leave requests</td></tr>';
+    return;
+  }
+  el.innerHTML = list.map(function(l) {
+    var actions = '';
+    if (l.status === 'pending') {
+      actions = '<button class="btn btn--success btn--sm" onclick="reviewLeave(\'' + l.id + '\',\'approved\')">Approve</button> ' +
+                '<button class="btn btn--danger btn--sm" onclick="reviewLeave(\'' + l.id + '\',\'rejected\')">Reject</button>';
+    } else {
+      actions = '<span class="text-xs text-muted">Reviewed</span>';
+    }
+    return '<tr>' +
+      '<td><div class="d-flex items-center gap-8">' + avatar(l.employee_name, 28) + '<div><strong>' + escHtml(l.employee_name) + '</strong></div></div></td>' +
+      '<td>' + statusBadge(l.leave_type) + '</td>' +
+      '<td>' + fmtDate(l.start_date) + '</td>' +
+      '<td>' + fmtDate(l.end_date) + '</td>' +
+      '<td>' + (l.days || 1) + '</td>' +
+      '<td class="text-sm">' + escHtml(l.reason || '').substring(0, 50) + '</td>' +
+      '<td>' + statusBadge(l.status) + '</td>' +
+      '<td>' + actions + '</td>' +
+      '</tr>';
+  }).join("");
+}
+
+function filterLeaves(status, btn) {
+  document.querySelectorAll(".tab").forEach(function(t) { t.classList.remove("tab--active"); });
+  btn.classList.add("tab--active");
+  currentFilter = status;
+  if (status === "all") renderLeaves(allLeaves);
+  else renderLeaves(allLeaves.filter(function(l) { return l.status === status; }));
+}
+
+async function reviewLeave(docId, status) {
+  var notes = "";
+  if (status === "rejected") {
+    notes = prompt("Reason for rejection (optional):");
+    if (notes === null) return;
+  }
+  var res = await api("/api/leave/" + docId, "PUT", {
+    status: status,
+    reviewed_by: Session.profile().name || "HR Admin",
+    notes: notes || ""
+  });
+  if (res.ok) {
+    toast("Leave " + status, "success");
+    loadLeaves();
+  } else {
+    toast(res.error || "Failed", "error");
+  }
+}
+
+loadLeaves();
+</script>
+{% endblock %}

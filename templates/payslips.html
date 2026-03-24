@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+{% block title %}Payslips{% endblock %}
+{% block page_title %}My Payslips{% endblock %}
+{% block page_sub %}View your salary history{% endblock %}
+{% block sidebar_key %}payslips{% endblock %}
+
+{% block content %}
+<div class="fade-up" id="payslip-list">
+  <div class="loading-spinner"></div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+if (!requireAuth()) throw "auth";
+const uid = Session.profile().uid;
+
+api(`/api/payroll?uid=${uid}`).then(d => {
+  const el = document.getElementById("payslip-list");
+  if (!d.ok || !d.payslips?.length) {
+    el.innerHTML = '<div class="empty-state"><div class="empty-state__icon"></div><div class="empty-state__text">No payslips generated yet</div></div>';
+    return;
+  }
+  el.innerHTML = d.payslips.map(p => `
+    <div class="payslip-card fade-up">
+      <div class="payslip-header">
+        <div>
+          <div style="font-size:18px;font-weight:700">${escHtml(p.month)}</div>
+          <div class="text-xs text-muted">Generated: ${fmtDate(p.generated_at)}</div>
+        </div>
+        <div style="text-align:right">
+          <div class="text-xs text-muted">Net Salary</div>
+          <div style="font-size:22px;font-weight:800;color:var(--success)">${fmtCurrency(p.net_salary)}</div>
+        </div>
+      </div>
+      <div class="payslip-grid">
+        <div>
+          <div style="font-weight:600;margin-bottom:8px;color:var(--text-secondary)">Earnings</div>
+          <div class="payslip-row"><span class="payslip-row__label">Basic Salary</span><span class="payslip-row__value">${fmtCurrency(p.basic)}</span></div>
+          <div class="payslip-row"><span class="payslip-row__label">HRA</span><span class="payslip-row__value">${fmtCurrency(p.hra)}</span></div>
+          <div class="payslip-row"><span class="payslip-row__label">Allowances</span><span class="payslip-row__value">${fmtCurrency(p.allowances)}</span></div>
+          <div class="payslip-row" style="border-top:1px solid var(--border);padding-top:8px"><span class="payslip-row__label"><strong>Gross Salary</strong></span><span class="payslip-row__value"><strong>${fmtCurrency(p.gross)}</strong></span></div>
+        </div>
+        <div>
+          <div style="font-weight:600;margin-bottom:8px;color:var(--text-secondary)">Deductions</div>
+          <div class="payslip-row"><span class="payslip-row__label">Employee PF (12%)</span><span class="payslip-row__value" style="color:var(--danger)">${fmtCurrency(p.employee_pf)}</span></div>
+          <div class="payslip-row"><span class="payslip-row__label">Professional Tax</span><span class="payslip-row__value" style="color:var(--danger)">${fmtCurrency(p.professional_tax)}</span></div>
+          <div class="payslip-row" style="border-top:1px solid var(--border);padding-top:8px"><span class="payslip-row__label"><strong>Total Deductions</strong></span><span class="payslip-row__value"><strong style="color:var(--danger)">${fmtCurrency(p.total_deductions)}</strong></span></div>
+          <div style="margin-top:12px;padding:8px;background:var(--primary-bg);border-radius:8px;font-size:11px;color:var(--text-secondary)">
+            <strong>EPFO:</strong> Employer EPF: ${fmtCurrency(p.employer_epf)} · EPS: ${fmtCurrency(p.eps)}
+          </div>
+        </div>
+      </div>
+    </div>
+  `).join("");
+});
+</script>
+{% endblock %}

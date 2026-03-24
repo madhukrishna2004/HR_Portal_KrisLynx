@@ -1,0 +1,81 @@
+{% extends "base.html" %}
+{% block title %}Grievance Cell{% endblock %}
+{% block page_title %}Grievance Cell{% endblock %}
+{% block page_sub %}Submit and track complaints{% endblock %}
+{% block sidebar_key %}grievance{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-between items-center mb-24 fade-up">
+  <p class="text-sm text-muted">Your complaints are confidential and will be handled by HR.</p>
+  <button class="btn btn--primary" onclick="openModal('complaint-modal')">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+    New Complaint
+  </button>
+</div>
+
+<div class="card fade-up delay-1">
+  <div class="card__header"><div class="card__title">My Complaints</div></div>
+  <div class="card__body">
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>ID</th><th>Category</th><th>Subject</th><th>Status</th><th>Submitted</th><th>Responses</th></tr></thead>
+        <tbody id="complaints-table"><tr><td colspan="6"><div class="loading-spinner"></div></td></tr></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="complaint-modal">
+  <div class="modal-box">
+    <div class="modal-header"><h3>Submit Complaint</h3><button class="modal-close" onclick="closeModal('complaint-modal')">&times;</button></div>
+    <div class="modal-body">
+      <div class="form-group"><label class="form-label">Category</label>
+        <select class="form-select" id="c-cat"><option value="general">General</option><option value="posh">POSH</option><option value="workplace">Workplace Issue</option><option value="other">Other</option></select>
+      </div>
+      <div class="form-group"><label class="form-label">Subject</label><input class="form-input" id="c-subject" placeholder="Brief subject..."></div>
+      <div class="form-group"><label class="form-label">Description</label><textarea class="form-textarea" id="c-desc" rows="5" placeholder="Describe your concern in detail..."></textarea></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn--secondary" onclick="closeModal('complaint-modal')">Cancel</button>
+      <button class="btn btn--primary" onclick="submitComplaint()">Submit</button>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+if (!requireAuth()) throw "auth";
+const user = Session.profile();
+
+function loadComplaints() {
+  api(`/api/complaints?uid=${user.uid}`).then(d => {
+    const el = document.getElementById("complaints-table");
+    if (!d.ok || !d.complaints?.length) { el.innerHTML = '<tr><td colspan="6" class="text-center text-muted" style="padding:30px">No complaints submitted</td></tr>'; return; }
+    el.innerHTML = d.complaints.map(c => `
+      <tr>
+        <td class="text-mono text-xs">${escHtml(c.complaint_id)}</td>
+        <td><span class="badge badge--indigo">${escHtml(c.category?.toUpperCase())}</span></td>
+        <td style="font-weight:600">${escHtml(c.subject)}</td>
+        <td>${statusBadge(c.status)}</td>
+        <td class="text-xs text-muted">${fmtDate(c.created_at)}</td>
+        <td>${(c.responses||[]).length} response(s)</td>
+      </tr>`).join("");
+  });
+}
+
+async function submitComplaint() {
+  const subject = document.getElementById("c-subject").value.trim();
+  const desc = document.getElementById("c-desc").value.trim();
+  if (!subject || !desc) { toast("All fields required", "warn"); return; }
+  const res = await api("/api/complaints", "POST", {
+    submitted_by: user.uid, submitted_name: user.name,
+    category: document.getElementById("c-cat").value,
+    subject, description: desc
+  });
+  if (res.ok) { toast("Complaint submitted", "success"); closeModal("complaint-modal"); loadComplaints(); }
+  else toast(res.error || "Failed", "error");
+}
+loadComplaints();
+</script>
+{% endblock %}

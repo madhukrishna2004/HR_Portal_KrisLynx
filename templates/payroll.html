@@ -1,0 +1,176 @@
+{% extends "base.html" %}
+{% block title %}Payroll{% endblock %}
+{% block page_title %}Payroll Engine{% endblock %}
+{% block page_sub %}EPFO-Compliant Payroll Management{% endblock %}
+{% block sidebar_key %}payroll{% endblock %}
+
+{% block content %}
+<!-- Payroll Controls -->
+<div class="d-flex items-center justify-between mb-24 fade-up">
+  <div class="d-flex items-center gap-16">
+    <div class="form-group" style="margin:0">
+      <label class="form-label">Month</label>
+      <input type="month" class="form-input" id="payroll-month" style="width:200px">
+    </div>
+  </div>
+  <div class="d-flex gap-12">
+    <button class="btn btn--secondary" onclick="selectAllEmployees()">Select All</button>
+    <button class="btn btn--primary" onclick="runPayroll()">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="1" y="4" width="22" height="16" rx="2"/><path d="M1 10h22"/></svg>
+      Run Payroll
+    </button>
+  </div>
+</div>
+
+<!-- Employee Selection -->
+<div class="card fade-up delay-1 mb-24">
+  <div class="card__header">
+    <div class="card__title">Select Employees</div>
+    <div class="search-box">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      <input type="text" placeholder="Search employees..." oninput="filterEmployees(this.value)">
+    </div>
+  </div>
+  <div class="card__body">
+    <div class="table-wrap">
+      <table>
+        <thead><tr>
+          <th style="width:40px"><input type="checkbox" id="select-all-cb" onchange="toggleSelectAll(this)"></th>
+          <th>Employee</th><th>Department</th><th>Basic</th><th>HRA</th><th>Allowances</th><th>Gross</th>
+        </tr></thead>
+        <tbody id="emp-table"><tr><td colspan="7"><div class="loading-spinner"></div></td></tr></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- Payroll History -->
+<div class="card fade-up delay-2">
+  <div class="card__header">
+    <div class="card__title">Payroll History</div>
+  </div>
+  <div class="card__body">
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Employee</th><th>Month</th><th>Gross</th><th>PF</th><th>Net Salary</th><th>Status</th><th>Generated</th></tr></thead>
+        <tbody id="payroll-history"><tr><td colspan="7"><div class="loading-spinner"></div></td></tr></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+if (!requireHR()) throw "auth";
+
+let allEmployees = [];
+let selectedUids = new Set();
+
+// Set default month
+document.getElementById("payroll-month").value = new Date().toISOString().slice(0, 7);
+
+// Load employees
+api("/api/employees").then(d => {
+  if (!d.ok) return;
+  allEmployees = (d.employees || []).filter(e => e.status === "active");
+  renderEmployees(allEmployees);
+});
+
+function renderEmployees(emps) {
+  const el = document.getElementById("emp-table");
+  if (!emps.length) {
+    el.innerHTML = '<tr><td colspan="7" class="text-center text-muted" style="padding:30px">No employees found</td></tr>';
+    return;
+  }
+  el.innerHTML = emps.map(e => {
+    const basic = e.salary_basic || 0;
+    const hra = e.salary_hra || 0;
+    const allow = e.salary_allowances || 0;
+    const gross = basic + hra + allow;
+    return `
+    <tr>
+      <td><input type="checkbox" class="emp-cb" value="${e.uid}" ${selectedUids.has(e.uid)?'checked':''} onchange="toggleEmployee(this)"></td>
+      <td><div class="d-flex items-center gap-8">${avatar(e.name,32)}<div><div style="font-weight:600">${escHtml(e.name)}</div><div class="text-xs text-muted">${escHtml(e.employee_id)}</div></div></div></td>
+      <td>${escHtml(e.department || '—')}</td>
+      <td>${fmtCurrency(basic)}</td>
+      <td>${fmtCurrency(hra)}</td>
+      <td>${fmtCurrency(allow)}</td>
+      <td><strong>${fmtCurrency(gross)}</strong></td>
+    </tr>`;
+  }).join("");
+}
+
+function filterEmployees(q) {
+  q = q.toLowerCase();
+  renderEmployees(allEmployees.filter(e =>
+    e.name?.toLowerCase().includes(q) || e.employee_id?.toLowerCase().includes(q)
+  ));
+}
+
+function toggleEmployee(cb) {
+  if (cb.checked) selectedUids.add(cb.value);
+  else selectedUids.delete(cb.value);
+}
+
+function toggleSelectAll(cb) {
+  document.querySelectorAll(".emp-cb").forEach(c => {
+    c.checked = cb.checked;
+    if (cb.checked) selectedUids.add(c.value);
+    else selectedUids.delete(c.value);
+  });
+}
+
+function selectAllEmployees() {
+  allEmployees.forEach(e => selectedUids.add(e.uid));
+  document.querySelectorAll(".emp-cb").forEach(c => c.checked = true);
+  document.getElementById("select-all-cb").checked = true;
+  toast(`${selectedUids.size} employees selected`, "info");
+}
+
+async function runPayroll() {
+  if (selectedUids.size === 0) { toast("Select at least one employee", "warn"); return; }
+  const month = document.getElementById("payroll-month").value;
+  if (!month) { toast("Select a month", "warn"); return; }
+
+  if (!confirm(`Run payroll for ${selectedUids.size} employees for ${month}?`)) return;
+
+  const res = await api("/api/payroll/run", "POST", {
+    month,
+    employee_uids: Array.from(selectedUids)
+  });
+
+  if (res.ok) {
+    toast(`Payroll generated for ${res.count} employees!`, "success");
+    loadPayrollHistory();
+    selectedUids.clear();
+    document.querySelectorAll(".emp-cb, #select-all-cb").forEach(c => c.checked = false);
+  } else {
+    toast(res.error || "Payroll failed", "error");
+  }
+}
+
+// Payroll History
+function loadPayrollHistory() {
+  api("/api/payroll").then(d => {
+    const el = document.getElementById("payroll-history");
+    if (!d.ok || !d.payslips?.length) {
+      el.innerHTML = '<tr><td colspan="7" class="text-center text-muted" style="padding:30px">No payroll records</td></tr>';
+      return;
+    }
+    el.innerHTML = d.payslips.slice(0, 50).map(p => `
+      <tr>
+        <td><div class="d-flex items-center gap-8">${avatar(p.employee_name,28)}<span style="font-weight:600">${escHtml(p.employee_name)}</span></div></td>
+        <td><span class="text-mono">${escHtml(p.month)}</span></td>
+        <td>${fmtCurrency(p.gross)}</td>
+        <td style="color:var(--danger)">-${fmtCurrency(p.employee_pf)}</td>
+        <td><strong style="color:var(--success)">${fmtCurrency(p.net_salary)}</strong></td>
+        <td>${statusBadge(p.status)}</td>
+        <td class="text-muted text-xs">${fmtDate(p.generated_at)}</td>
+      </tr>
+    `).join("");
+  });
+}
+loadPayrollHistory();
+</script>
+{% endblock %}

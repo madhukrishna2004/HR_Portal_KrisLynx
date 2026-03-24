@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+{% block title %}My Profile{% endblock %}
+{% block page_title %}My Profile{% endblock %}
+{% block page_sub %}View and manage your information{% endblock %}
+{% block sidebar_key %}profile{% endblock %}
+
+{% block content %}
+<div style="max-width:700px" class="fade-up">
+  <div class="card mb-24">
+    <div class="card__body" style="text-align:center;padding:40px">
+      <div id="profile-avatar" style="margin:0 auto 16px"></div>
+      <h2 id="p-name" style="font-size:22px;font-weight:700">Loading...</h2>
+      <div id="p-role" class="text-muted mt-8">—</div>
+      <div id="p-empid" class="text-mono text-xs text-muted mt-8">—</div>
+    </div>
+  </div>
+
+  <div class="card mb-24">
+    <div class="card__header"><div class="card__title">Personal Information</div></div>
+    <div class="card__body">
+      <div class="form-row mb-16">
+        <div class="form-group"><label class="form-label">Full Name</label><input class="form-input" id="f-name" readonly></div>
+        <div class="form-group"><label class="form-label">Email</label><input class="form-input" id="f-email" readonly></div>
+      </div>
+      <div class="form-row mb-16">
+        <div class="form-group"><label class="form-label">Phone</label><input class="form-input" id="f-phone"></div>
+        <div class="form-group"><label class="form-label">Department</label><input class="form-input" id="f-dept" readonly></div>
+      </div>
+      <div class="form-row mb-16">
+        <div class="form-group"><label class="form-label">Position</label><input class="form-input" id="f-position" readonly></div>
+        <div class="form-group"><label class="form-label">Join Date</label><input class="form-input" id="f-joined" readonly></div>
+      </div>
+      <button class="btn btn--primary" onclick="updateProfile()">Save Changes</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card__header"><div class="card__title">Leave Balance</div></div>
+    <div class="card__body">
+      <div class="form-row--3" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px">
+        <div class="stat-card stat-card--green" style="text-align:center"><div class="stat-card__label">Casual</div><div class="stat-card__value" id="lb-c">—</div></div>
+        <div class="stat-card stat-card--blue" style="text-align:center"><div class="stat-card__label">Sick</div><div class="stat-card__value" id="lb-s">—</div></div>
+        <div class="stat-card stat-card--primary" style="text-align:center"><div class="stat-card__label">Earned</div><div class="stat-card__value" id="lb-e">—</div></div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+if (!requireAuth()) throw "auth";
+const user = Session.profile();
+document.getElementById("profile-avatar").innerHTML = avatar(user.name, 80);
+document.getElementById("p-name").textContent = user.name || "User";
+document.getElementById("p-role").textContent = `${user.position || 'Employee'} · ${user.department || 'General'}`;
+document.getElementById("p-empid").textContent = user.employee_id || "";
+document.getElementById("f-name").value = user.name || "";
+document.getElementById("f-email").value = user.email || "";
+document.getElementById("f-phone").value = user.phone || "";
+document.getElementById("f-dept").value = user.department || "";
+document.getElementById("f-position").value = user.position || "";
+document.getElementById("f-joined").value = fmtDate(user.join_date);
+const lb = user.leave_balance || {};
+document.getElementById("lb-c").textContent = lb.casual || 0;
+document.getElementById("lb-s").textContent = lb.sick || 0;
+document.getElementById("lb-e").textContent = lb.earned || 0;
+
+async function updateProfile() {
+  const res = await api(`/api/employees/${user.uid}`, "PUT", { phone: document.getElementById("f-phone").value.trim() });
+  if (res.ok) toast("Profile updated!", "success");
+  else toast(res.error || "Failed", "error");
+}
+</script>
+{% endblock %}

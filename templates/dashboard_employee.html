@@ -1,169 +1,177 @@
 {% extends "base.html" %}
 {% block title %}My Dashboard{% endblock %}
-{% block page_title %}<span id="greeting-text">Dashboard</span>{% endblock %}
-{% block page_sub %}<span id="date-display"></span>{% endblock %}
+{% block page_title %}Dashboard{% endblock %}
+{% block page_sub %}<span id="greeting-text"></span>{% endblock %}
 {% block sidebar_key %}dashboard{% endblock %}
 
-{% block topbar_actions %}
-<a href="/employee/eod" class="btn btn--primary">
-  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-  Submit EOD
-</a>
-{% endblock %}
-
 {% block content %}
-<!-- Profile hero -->
-<div class="card card--hi fade-up" style="margin-bottom:24px">
-  <div style="padding:28px 32px;display:flex;align-items:center;gap:24px;background:linear-gradient(135deg,rgba(99,102,241,.08),rgba(6,182,212,.05));border-radius:var(--radius)">
-    <div id="profile-avatar" style="width:72px;height:72px;border-radius:18px;background:var(--grad-a);display:flex;align-items:center;justify-content:center;font-size:26px;font-weight:800;color:white;flex-shrink:0;box-shadow:0 8px 24px rgba(99,102,241,.4)">?</div>
-    <div style="flex:1">
-      <div style="font-size:22px;font-weight:800;letter-spacing:-.5px" id="profile-name">Loading…</div>
-      <div style="font-size:13px;color:var(--text-muted);margin-top:4px" id="profile-pos"></div>
-      <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap">
-        <span class="badge badge--indigo" id="profile-dept"></span>
-        <span class="badge badge--gray"   id="profile-join"></span>
-        <span class="badge badge--green">Active</span>
-      </div>
-    </div>
-    <div style="text-align:right">
-      <div style="font-size:13px;color:var(--text-muted);margin-bottom:4px">Employee ID</div>
-      <div class="text-mono" style="font-size:22px;font-weight:700;color:var(--indigo-hi)" id="profile-eid">—</div>
-    </div>
+<!-- Smart Greeting Card -->
+<div class="greeting-card fade-up" id="greeting-card">
+  <h2 id="greeting-main">Hello </h2>
+  <p id="greeting-sub">Welcome to your personal workspace</p>
+  <div class="greeting-insights" id="greeting-insights"></div>
+</div>
+
+<!-- Stat Summary -->
+<div class="stat-grid fade-up delay-1">
+  <div class="stat-card stat-card--primary">
+    <div class="stat-card__label">My Tasks</div>
+    <div class="stat-card__value" id="s-tasks">—</div>
+    <div class="stat-card__sub">pending</div>
+  </div>
+  <div class="stat-card stat-card--blue">
+    <div class="stat-card__label">My Projects</div>
+    <div class="stat-card__value" id="s-projects">—</div>
+    <div class="stat-card__sub">active</div>
+  </div>
+  <div class="stat-card stat-card--green">
+    <div class="stat-card__label">Leave Balance</div>
+    <div class="stat-card__value" id="s-leave">—</div>
+    <div class="stat-card__sub">days remaining</div>
+  </div>
+  <div class="stat-card stat-card--amber">
+    <div class="stat-card__label">Last Salary</div>
+    <div class="stat-card__value" id="s-salary">—</div>
+    <div class="stat-card__sub">net pay</div>
   </div>
 </div>
 
-<!-- Quick stats -->
-<div class="three-col fade-up delay-1" style="margin-bottom:24px">
-  <div class="stat-card"><div class="stat-card__label">My Projects</div><div class="stat-card__value" id="s-projs">—</div><div class="stat-card__sub">assigned</div></div>
-  <div class="stat-card"><div class="stat-card__label">Pending Tasks</div><div class="stat-card__value" id="s-tasks">—</div><div class="stat-card__sub">need action</div></div>
-  <div class="stat-card"><div class="stat-card__label">EOD Reports</div><div class="stat-card__value" id="s-eod">—</div><div class="stat-card__sub">submitted total</div></div>
-</div>
-
-<!-- Projects + Tasks -->
-<div class="two-col fade-up delay-2" style="margin-bottom:24px">
+<!-- Tasks & Quick Info -->
+<div class="dashboard-grid fade-up delay-2">
   <div class="card">
-    <div class="card__header"><div class="card__title">My Projects</div><a href="/employee/projects" class="btn btn--ghost btn--sm">View all</a></div>
-    <div id="my-projects" class="card__body" style="display:flex;flex-direction:column;gap:12px"><div class="empty-state"><div class="empty-state__title">Loading…</div></div></div>
+    <div class="card__header">
+      <div class="card__title">My Active Tasks</div>
+      <a href="/employee/tasks" class="btn btn--ghost btn--sm">View All →</a>
+    </div>
+    <div class="card__body" id="task-list" style="max-height:350px;overflow-y:auto">
+      <div class="loading-spinner"></div>
+    </div>
   </div>
+
   <div class="card">
-    <div class="card__header"><div class="card__title">My Tasks</div><a href="/employee/tasks" class="btn btn--ghost btn--sm">View all</a></div>
-    <div id="my-tasks" class="table-wrap"><div class="empty-state"><div class="empty-state__title">Loading…</div></div></div>
+    <div class="card__header">
+      <div class="card__title">Salary Overview</div>
+      <a href="/employee/payslips" class="btn btn--ghost btn--sm">All Payslips →</a>
+    </div>
+    <div class="card__body" id="salary-overview">
+      <div class="loading-spinner"></div>
+    </div>
   </div>
 </div>
 
-<!-- Quick EOD -->
+<!-- Notifications Feed -->
 <div class="card fade-up delay-3">
   <div class="card__header">
-    <div><div class="card__title">Quick EOD Submission</div><div class="card__sub" id="eod-date-label">Today's end-of-day report</div></div>
-    <span class="badge badge--amber">Required daily</span>
+    <div class="card__title">Recent Notifications</div>
   </div>
-  <div class="card__body">
-    <div class="form-grid form-grid--2">
-      <div class="form-group full-span">
-        <label class="form-label">Tasks completed today *</label>
-        <textarea id="eod-tasks" class="form-control" rows="4" placeholder="• Completed API integration&#10;• Reviewed design mockups&#10;• Attended standup"></textarea>
-      </div>
-      <div class="form-group">
-        <label class="form-label">Hours worked</label>
-        <input id="eod-time" class="form-control" type="number" min="1" max="14" placeholder="8"/>
-      </div>
-      <div class="form-group">
-        <label class="form-label">Blockers / Challenges</label>
-        <input id="eod-challenges" class="form-control" placeholder="Any blockers today?"/>
-      </div>
-      <div class="form-group full-span">
-        <label class="form-label">Plan for tomorrow</label>
-        <textarea id="eod-tomorrow" class="form-control" rows="2" placeholder="What will you work on tomorrow?"></textarea>
-      </div>
-      <div class="form-group full-span">
-        <label class="form-label">Attachment (optional)</label>
-        <div class="upload-zone" onclick="document.getElementById('eod-file').click()">
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-          <div class="upload-zone__label">Click to upload</div>
-          <div class="upload-zone__sub" id="file-label">PDF, DOC, PNG, JPG (max 10 MB)</div>
-        </div>
-        <input id="eod-file" type="file" class="hidden" accept=".pdf,.doc,.docx,.png,.jpg" onchange="document.getElementById('file-label').textContent=this.files[0]?.name||'PDF, DOC, PNG, JPG (max 10 MB)'"/>
-      </div>
-    </div>
-    <div id="eod-error"   class="alert alert--error   hidden" style="margin-top:12px"></div>
-    <div id="eod-success" class="alert alert--success hidden" style="margin-top:12px">✓ EOD report submitted successfully!</div>
-    <button id="eod-btn" class="btn btn--primary" style="margin-top:16px;width:100%;justify-content:center;padding:12px" onclick="submitEOD()">Submit EOD Report</button>
+  <div class="card__body" id="recent-notifs" style="max-height:300px;overflow-y:auto">
+    <div class="loading-spinner"></div>
   </div>
 </div>
 {% endblock %}
 
 {% block scripts %}
 <script>
-requireAuth();
-const user  = Session.profile();
-const today = new Date().toISOString().split("T")[0];
-const h     = new Date().getHours();
-document.getElementById("greeting-text").textContent = `Good ${h<12?"morning":h<17?"afternoon":"evening"}, ${user.name?.split(" ")[0]||"there"}!`;
-document.getElementById("date-display").textContent  = new Date().toLocaleDateString("en-IN",{weekday:"long",day:"numeric",month:"long",year:"numeric"});
-document.getElementById("eod-date-label").textContent = new Date().toLocaleDateString("en-IN",{weekday:"long",day:"numeric",month:"long"});
+if (!requireAuth()) throw "auth";
 
-async function loadProfile(){
-  const d=await api(`/api/employees/${user.uid}`); const e=d.employee||user;
-  document.getElementById("profile-avatar").textContent=initials(e.name||"?");
-  document.getElementById("profile-name").textContent=e.name||"—";
-  document.getElementById("profile-pos").textContent=`${e.position||e.role||"Employee"} · ${e.email||""}`;
-  document.getElementById("profile-dept").textContent=e.department||"No Department";
-  document.getElementById("profile-join").textContent=e.join_date?`Joined ${fmtDate(e.join_date)}`:"";
-  document.getElementById("profile-eid").textContent=e.employee_id||"—";
-}
-async function loadProjects(){
-  const d=await api(`/api/projects?uid=${user.uid}`); const el=document.getElementById("my-projects");
-  const list=(d.projects||[]).slice(0,3);
-  document.getElementById("s-projs").textContent=d.projects?.length??0;
-  if(!list.length){el.innerHTML=`<div class="empty-state" style="padding:20px 0"><div class="empty-state__title">No projects yet</div></div>`;return;}
-  el.innerHTML=list.map(p=>`
-    <div style="background:var(--surface-2);border:1px solid var(--border);border-radius:10px;padding:14px">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
-        <div style="font-size:13.5px;font-weight:700">${escHtml(p.name)}</div>${statusBadge(p.status||"active")}
+const user = Session.profile();
+const uid = user.uid;
+
+document.getElementById("greeting-main").textContent = getGreeting(user.name || "there");
+
+// Leave balance
+const lb = user.leave_balance || { casual: 12, sick: 6, earned: 15 };
+const totalLeave = (lb.casual || 0) + (lb.sick || 0) + (lb.earned || 0);
+document.getElementById("s-leave").textContent = totalLeave;
+
+// Tasks
+api(`/api/tasks?uid=${uid}`).then(d => {
+  const el = document.getElementById("task-list");
+  if (!d.ok || !d.tasks?.length) {
+    el.innerHTML = '<div class="empty-state"><div class="empty-state__icon"></div><div class="empty-state__text">No tasks assigned yet</div></div>';
+    return;
+  }
+  const pending = d.tasks.filter(t => t.status !== "completed");
+  document.getElementById("s-tasks").textContent = pending.length;
+
+  el.innerHTML = pending.slice(0, 8).map(t => `
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border)">
+      <div>
+        <div style="font-size:13.5px;font-weight:600;color:var(--text)">${escHtml(t.title)}</div>
+        <div style="font-size:12px;color:var(--text-muted);margin-top:2px">Due: ${fmtDate(t.deadline)} · ${statusBadge(t.status)}</div>
       </div>
-      <div style="margin-bottom:8px">${progressBar(p.progress||0)}</div>
-      <div style="font-size:11.5px;color:var(--text-muted)">Due ${fmtDate(p.deadline)}</div>
-    </div>`).join("");
-}
-async function loadTasks(){
-  const d=await api(`/api/tasks?uid=${user.uid}`); const el=document.getElementById("my-tasks");
-  const list=(d.tasks||[]).slice(0,5);
-  document.getElementById("s-tasks").textContent=(d.tasks||[]).filter(t=>t.status!=="completed").length;
-  if(!list.length){el.innerHTML=`<div class="empty-state" style="padding:20px 0"><div class="empty-state__title">No tasks assigned</div></div>`;return;}
-  el.innerHTML=`<table><thead><tr><th>Task</th><th>Priority</th><th>Status</th></tr></thead><tbody>${list.map(t=>`
-    <tr><td style="font-size:13px;font-weight:600;max-width:160px" class="truncate">${escHtml(t.title)}</td>
-    <td>${priorityBadge(t.priority||"medium")}</td><td>${statusBadge(t.status||"pending")}</td></tr>`).join("")}</tbody></table>`;
-}
-async function loadEODCount(){
-  const d=await api(`/api/eod?uid=${user.uid}`);
-  document.getElementById("s-eod").textContent=d.reports?.length??0;
-}
-async function submitEOD(){
-  const tasks=document.getElementById("eod-tasks").value.trim();
-  const errEl=document.getElementById("eod-error"); const sucEl=document.getElementById("eod-success");
-  errEl.classList.add("hidden"); sucEl.classList.add("hidden");
-  if(!tasks){errEl.textContent="Please describe the tasks you completed today.";errEl.classList.remove("hidden");return;}
-  const btn=document.getElementById("eod-btn"); btn.disabled=true; btn.textContent="Submitting…";
-  try{
-    let attachments=[];
-    const fi=document.getElementById("eod-file");
-    if(fi.files[0]){
-      const fd=new FormData(); fd.append("file",fi.files[0]); fd.append("uid",user.uid||"unknown");
-      const r=await fetch("/api/upload",{method:"POST",body:fd}); const u=await r.json();
-      if(u.ok) attachments=[{url:u.url,name:u.name}];
-    }
-    const d=await api("/api/eod","POST",{employee_id:user.uid||"",employee_name:user.name||user.email||"Unknown",
-      date:today,tasks_completed:tasks,time_spent:document.getElementById("eod-time").value,
-      challenges:document.getElementById("eod-challenges").value,tomorrow_plan:document.getElementById("eod-tomorrow").value,attachments});
-    if(d.ok){
-      sucEl.classList.remove("hidden");
-      ["eod-tasks","eod-time","eod-challenges","eod-tomorrow"].forEach(id=>document.getElementById(id).value="");
-      fi.value=""; document.getElementById("file-label").textContent="PDF, DOC, PNG, JPG (max 10 MB)";
-      loadEODCount();
-    } else {errEl.textContent=d.error||"Submission failed.";errEl.classList.remove("hidden");}
-  } catch(e){errEl.textContent=e.message;errEl.classList.remove("hidden");}
-  btn.disabled=false; btn.textContent="Submit EOD Report";
-}
-loadProfile(); loadProjects(); loadTasks(); loadEODCount();
+      ${priorityBadge(t.priority)}
+    </div>
+  `).join("");
+});
+
+// Projects
+api(`/api/projects?uid=${uid}`).then(d => {
+  if (d.ok) {
+    const active = (d.projects || []).filter(p => p.status === "active");
+    document.getElementById("s-projects").textContent = active.length;
+  }
+});
+
+// Salary - latest payslip
+api(`/api/payroll?uid=${uid}`).then(d => {
+  const el = document.getElementById("salary-overview");
+  if (!d.ok || !d.payslips?.length) {
+    el.innerHTML = `
+      <div class="empty-state">
+        <div class="empty-state__icon"></div>
+        <div class="empty-state__text">No payslips generated yet</div>
+      </div>`;
+    document.getElementById("s-salary").textContent = "—";
+    return;
+  }
+  const latest = d.payslips[0];
+  document.getElementById("s-salary").textContent = fmtCurrency(latest.net_salary);
+  el.innerHTML = `
+    <div style="margin-bottom:8px;font-size:12px;color:var(--text-muted)">Payslip for <strong>${escHtml(latest.month)}</strong></div>
+    <div class="payslip-row"><span class="payslip-row__label">Basic Salary</span><span class="payslip-row__value">${fmtCurrency(latest.basic)}</span></div>
+    <div class="payslip-row"><span class="payslip-row__label">HRA</span><span class="payslip-row__value">${fmtCurrency(latest.hra)}</span></div>
+    <div class="payslip-row"><span class="payslip-row__label">Allowances</span><span class="payslip-row__value">${fmtCurrency(latest.allowances)}</span></div>
+    <div class="payslip-row" style="border-top:1px solid var(--border);padding-top:8px"><span class="payslip-row__label"><strong>Gross</strong></span><span class="payslip-row__value">${fmtCurrency(latest.gross)}</span></div>
+    <div class="payslip-row"><span class="payslip-row__label">PF Deduction</span><span class="payslip-row__value" style="color:var(--danger)">-${fmtCurrency(latest.employee_pf)}</span></div>
+    <div class="payslip-row"><span class="payslip-row__label">Professional Tax</span><span class="payslip-row__value" style="color:var(--danger)">-${fmtCurrency(latest.professional_tax)}</span></div>
+    <div class="payslip-total">
+      <span>Net Salary</span>
+      <span class="payslip-total__value">${fmtCurrency(latest.net_salary)}</span>
+    </div>
+  `;
+});
+
+// Notifications
+api(`/api/notifications?uid=${uid}`).then(d => {
+  const el = document.getElementById("recent-notifs");
+  if (!d.ok || !d.notifications?.length) {
+    el.innerHTML = '<div class="empty-state"><div class="empty-state__icon"></div><div class="empty-state__text">No notifications</div></div>';
+    return;
+  }
+  const icons = { task:"T", payroll:"P", leave:"L", hr_announcement:"HR", mail:"M", system:"S" };
+  el.innerHTML = d.notifications.slice(0, 10).map(n => `
+    <div class="notif-item ${n.read?'':'notif-item--unread'}">
+      <div class="notif-item__icon" style="background:var(--primary-bg);font-size:11px;font-weight:700;color:var(--primary)">${icons[n.category]||'N'}</div>
+      <div class="notif-item__body">
+        <div class="notif-item__title">${escHtml(n.title)}</div>
+        <div class="notif-item__text">${escHtml(n.message).substring(0,80)}</div>
+        <div class="notif-item__time">${timeAgo(n.created_at)}</div>
+      </div>
+    </div>
+  `).join("");
+});
+
+// Greeting insights
+const insights = [];
+api("/api/stats").then(() => {});
+setTimeout(() => {
+  const tasks = document.getElementById("s-tasks").textContent;
+  if (tasks && tasks !== "—" && parseInt(tasks) > 0) insights.push(`${tasks} pending tasks`);
+  insights.push(`${totalLeave} leave days available`);
+  document.getElementById("greeting-insights").innerHTML = insights.map(i =>
+    `<div class="greeting-insight">${i}</div>`).join("");
+  document.getElementById("greeting-sub").textContent = "Here's what's happening in your workspace.";
+}, 1500);
 </script>
 {% endblock %}

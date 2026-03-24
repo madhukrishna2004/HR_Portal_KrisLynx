@@ -4,16 +4,22 @@
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <meta name="robots" content="noindex, nofollow"/>
-  <title>{% block title %}KrisLynx HR{% endblock %} — KrisLynx HR Portal</title>
+  <title>{% block title %}LynxPort{% endblock %} — LynxPort</title>
   <link rel="stylesheet" href="/static/css/style.css"/>
   {% block head_extra %}{% endblock %}
 </head>
 <body>
+<div class="app-bg-decor"></div>
+
+<!-- Onboarding Overlay -->
+<div id="onboard-overlay" class="onboard-overlay" style="display:none">
+  <div class="onboard-box" id="onboard-content"></div>
+</div>
+
 <div class="app-shell">
   <div id="sidebar-mount"></div>
 
   <div class="main-content">
-
     <!-- Topbar -->
     <div class="topbar">
       <div class="topbar__left">
@@ -22,6 +28,29 @@
       </div>
       <div class="topbar__right" id="topbar-actions">
         {% block topbar_actions %}{% endblock %}
+
+        <!-- Notification Bell -->
+        <div class="notif-bell-wrap" style="position:relative">
+          <div class="notif-bell" onclick="toggleNotifDropdown()">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
+              <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
+            </svg>
+            <span class="notif-bell__count" id="notif-count" style="display:none">0</span>
+          </div>
+          <div class="notif-dropdown" id="notif-dropdown">
+            <div class="notif-dropdown__header">
+              <span>Notifications</span>
+              <button class="btn btn--ghost btn--sm" onclick="markAllRead()">Mark all read</button>
+            </div>
+            <div id="notif-list"></div>
+          </div>
+        </div>
+
+        <!-- Theme Toggle -->
+        <div class="theme-toggle" onclick="toggleTheme()" id="theme-icon" title="Toggle theme">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+        </div>
       </div>
     </div>
 
@@ -29,23 +58,25 @@
     <div class="page-body">
       {% block content %}{% endblock %}
     </div>
-
   </div>
 </div>
 
-<!-- Firebase Auth SDK (for token refresh on all pages) -->
-<script type="module">
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-  import { getAuth }       from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
-  const config   = {{ firebase_config | safe }};
-  const fireApp  = initializeApp(config);
-  window._fbAuth = getAuth(fireApp);
+<!-- Firebase Compat SDK -->
+<script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
+<script>
+  try {
+    if (typeof firebase !== "undefined") {
+      var _fbConfig = {{ firebase_config | safe }};
+      if (!firebase.apps.length) firebase.initializeApp(_fbConfig);
+      window._fbAuth = firebase.auth();
+    }
+  } catch(e) { console.warn("Firebase init:", e); }
 </script>
 
 <script src="/static/js/shared.js"></script>
 
 <script>
-  // Build sidebar — activeKey is set by each page
   document.getElementById("sidebar-mount").innerHTML = buildSidebar("{% block sidebar_key %}{% endblock %}");
 </script>
 

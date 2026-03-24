@@ -1,0 +1,115 @@
+{% extends "base.html" %}
+{% block title %}HR Policies{% endblock %}
+{% block page_title %}HR Policies{% endblock %}
+{% block page_sub %}Company policies and guidelines{% endblock %}
+{% block sidebar_key %}policies{% endblock %}
+
+{% block content %}
+<div class="tabs fade-up">
+  <button class="tab tab--active" onclick="showPolicy('conduct', this)">Code of Conduct</button>
+  <button class="tab" onclick="showPolicy('posh', this)">POSH Policy</button>
+  <button class="tab" onclick="showPolicy('leave', this)">Leave Policy</button>
+  <button class="tab" onclick="showPolicy('grievance', this)">Grievance Redressal</button>
+</div>
+
+<div class="card fade-up delay-1">
+  <div class="card__body" id="policy-content" style="max-width:800px;line-height:1.8;font-size:14px">
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const policies = {
+  conduct: `
+    <h2 style="font-size:20px;font-weight:700;margin-bottom:16px;color:var(--primary)">Code of Conduct</h2>
+    <p>At KrisLynx LLP, we are committed to maintaining the highest standards of professional conduct. Every employee is expected to uphold the values of integrity, respect, and excellence.</p>
+
+    <h3 style="font-size:16px;font-weight:700;margin:20px 0 10px">General Rules</h3>
+    <p>• Maintain professional behavior in all interactions with colleagues, clients, and partners.</p>
+    <p>• Respect office hours and attendance policies. Report absences in advance through LynxPort.</p>
+    <p>• Use company resources responsibly and only for authorized purposes.</p>
+    <p>• Maintain confidentiality of all company information and client data.</p>
+    <p>• Dress appropriately as per the company dress code.</p>
+
+    <h3 style="font-size:16px;font-weight:700;margin:20px 0 10px">Employee Expectations</h3>
+    <p>• Complete assigned tasks within deadlines and maintain quality standards.</p>
+    <p>• Submit EOD reports daily through LynxPort.</p>
+    <p>• Participate actively in team meetings and training sessions.</p>
+    <p>• Report any concerns or violations to HR immediately.</p>
+    <p>• Foster an inclusive and supportive work environment.</p>
+
+    <h3 style="font-size:16px;font-weight:700;margin:20px 0 10px">Prohibited Conduct</h3>
+    <p>• Harassment, discrimination, or bullying of any kind.</p>
+    <p>• Misuse or theft of company property or intellectual assets.</p>
+    <p>• Unauthorized sharing of confidential information.</p>
+    <p>• Substance abuse during work hours or on company premises.</p>
+  `,
+  posh: `
+    <h2 style="font-size:20px;font-weight:700;margin-bottom:16px;color:var(--primary)">Prevention of Sexual Harassment (POSH) Policy</h2>
+    <p>KrisLynx LLP is committed to providing a safe and respectful workplace, free from sexual harassment. This policy is in compliance with the Sexual Harassment of Women at Workplace (Prevention, Prohibition and Redressal) Act, 2013.</p>
+
+    <h3 style="font-size:16px;font-weight:700;margin:20px 0 10px">What is Sexual Harassment?</h3>
+    <p>Sexual harassment includes unwelcome sexually determined behavior such as physical contact, demand for sexual favors, sexually colored remarks, showing pornography, or any other unwelcome conduct of a sexual nature.</p>
+
+    <h3 style="font-size:16px;font-weight:700;margin:20px 0 10px">Internal Complaints Committee</h3>
+    <p>KrisLynx LLP has constituted an Internal Complaints Committee (ICC) to address complaints. The committee ensures fair, timely, and confidential resolution of all cases.</p>
+
+    <h3 style="font-size:16px;font-weight:700;margin:20px 0 10px">How to Report</h3>
+    <p>• Use the <strong>Grievance Cell</strong> in LynxPort with category "POSH".</p>
+    <p>• Reports can also be submitted in writing to the ICC.</p>
+    <p>• All complaints are treated with strict confidentiality.</p>
+    <p>• No employee will face retaliation for filing a genuine complaint.</p>
+
+    <h3 style="font-size:16px;font-weight:700;margin:20px 0 10px">Awareness & Training</h3>
+    <p>All employees are required to complete annual POSH awareness training. KrisLynx conducts regular workshops and awareness campaigns to ensure a safe workplace for everyone.</p>
+  `,
+  leave: `
+    <h2 style="font-size:20px;font-weight:700;margin-bottom:16px;color:var(--primary)">Leave Policy</h2>
+
+    <h3 style="font-size:16px;font-weight:700;margin:20px 0 10px">Leave Types & Entitlement</h3>
+    <p><strong>Casual Leave (CL):</strong> 12 days per year. For personal matters. Maximum 3 consecutive days.</p>
+    <p><strong>Sick Leave (SL):</strong> 6 days per year. Medical certificate required for 3+ consecutive days.</p>
+    <p><strong>Earned Leave (EL):</strong> 15 days per year. Accrued monthly. Can be carried forward (max 30 days).</p>
+
+    <h3 style="font-size:16px;font-weight:700;margin:20px 0 10px">How to Apply</h3>
+    <p>• Submit leave requests through <strong>LynxPort → Leave Management</strong>.</p>
+    <p>• Apply at least 3 days in advance for planned leaves.</p>
+    <p>• Emergency leaves can be applied retroactively with manager approval.</p>
+
+    <h3 style="font-size:16px;font-weight:700;margin:20px 0 10px">Approval Process</h3>
+    <p>• Leave requests are reviewed by HR within 24 hours.</p>
+    <p>• Approved/rejected status is notified via LynxPort notifications.</p>
+    <p>• Leave without prior approval may be marked as unauthorized absence.</p>
+  `,
+  grievance: `
+    <h2 style="font-size:20px;font-weight:700;margin-bottom:16px;color:var(--primary)">Grievance Redressal Policy</h2>
+
+    <h3 style="font-size:16px;font-weight:700;margin:20px 0 10px">Purpose</h3>
+    <p>KrisLynx LLP provides a structured process for employees to raise and resolve workplace grievances in a fair and timely manner.</p>
+
+    <h3 style="font-size:16px;font-weight:700;margin:20px 0 10px">How to File a Grievance</h3>
+    <p>• Navigate to <strong>Grievance Cell</strong> in LynxPort.</p>
+    <p>• Select the appropriate category (General, POSH, Workplace, Other).</p>
+    <p>• Provide a clear subject and detailed description.</p>
+    <p>• All submissions are confidential.</p>
+
+    <h3 style="font-size:16px;font-weight:700;margin:20px 0 10px">Resolution Process</h3>
+    <p>• HR acknowledges the grievance within 48 hours.</p>
+    <p>• Investigation is conducted within 7 working days.</p>
+    <p>• Resolution and response are communicated via LynxPort.</p>
+    <p>• Employees can track status and view responses in real time.</p>
+
+    <h3 style="font-size:16px;font-weight:700;margin:20px 0 10px">Anti-Retaliation</h3>
+    <p>KrisLynx strictly prohibits any form of retaliation against employees who file grievances in good faith. Any retaliatory action will be treated as a separate violation.</p>
+  `,
+};
+
+function showPolicy(key, btn) {
+  document.querySelectorAll(".tab").forEach(t => t.classList.remove("tab--active"));
+  if (btn) btn.classList.add("tab--active");
+  document.getElementById("policy-content").innerHTML = policies[key] || '<p class="text-muted">Policy not found.</p>';
+}
+showPolicy("conduct");
+</script>
+{% endblock %}

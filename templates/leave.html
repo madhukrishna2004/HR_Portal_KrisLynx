@@ -1,0 +1,97 @@
+{% extends "base.html" %}
+{% block title %}Leave Management{% endblock %}
+{% block page_title %}Leave Management{% endblock %}
+{% block page_sub %}Request and track your leaves{% endblock %}
+{% block sidebar_key %}leave{% endblock %}
+
+{% block content %}
+<!-- Leave Balance -->
+<div class="stat-grid fade-up">
+  <div class="stat-card stat-card--green"><div class="stat-card__label">Casual Leave</div><div class="stat-card__value" id="lb-casual">—</div><div class="stat-card__sub">available</div></div>
+  <div class="stat-card stat-card--blue"><div class="stat-card__label">Sick Leave</div><div class="stat-card__value" id="lb-sick">—</div><div class="stat-card__sub">available</div></div>
+  <div class="stat-card stat-card--primary"><div class="stat-card__label">Earned Leave</div><div class="stat-card__value" id="lb-earned">—</div><div class="stat-card__sub">available</div></div>
+</div>
+
+<div class="d-flex justify-between items-center mb-24 fade-up delay-1">
+  <h3 style="font-size:16px;font-weight:700">My Leave Requests</h3>
+  <button class="btn btn--primary" onclick="openModal('leave-modal')">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+    Request Leave
+  </button>
+</div>
+
+<div class="card fade-up delay-2">
+  <div class="card__body">
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Type</th><th>From</th><th>To</th><th>Days</th><th>Reason</th><th>Status</th><th>Submitted</th></tr></thead>
+        <tbody id="leave-table"><tr><td colspan="7"><div class="loading-spinner"></div></td></tr></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- Request Leave Modal -->
+<div class="modal-overlay" id="leave-modal">
+  <div class="modal-box">
+    <div class="modal-header"><h3>Request Leave</h3><button class="modal-close" onclick="closeModal('leave-modal')">&times;</button></div>
+    <div class="modal-body">
+      <div class="form-group"><label class="form-label">Leave Type</label>
+        <select class="form-select" id="lv-type"><option value="casual">Casual Leave</option><option value="sick">Sick Leave</option><option value="earned">Earned Leave</option></select>
+      </div>
+      <div class="form-row mb-16">
+        <div class="form-group"><label class="form-label">Start Date</label><input class="form-input" id="lv-start" type="date"></div>
+        <div class="form-group"><label class="form-label">End Date</label><input class="form-input" id="lv-end" type="date"></div>
+      </div>
+      <div class="form-group"><label class="form-label">Reason</label><textarea class="form-textarea" id="lv-reason" rows="3" placeholder="Reason for leave..."></textarea></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn--secondary" onclick="closeModal('leave-modal')">Cancel</button>
+      <button class="btn btn--primary" onclick="submitLeave()">Submit Request</button>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+if (!requireAuth()) throw "auth";
+const user = Session.profile();
+const lb = user.leave_balance || { casual: 12, sick: 6, earned: 15 };
+document.getElementById("lb-casual").textContent = lb.casual || 0;
+document.getElementById("lb-sick").textContent = lb.sick || 0;
+document.getElementById("lb-earned").textContent = lb.earned || 0;
+
+function loadLeaves() {
+  api(`/api/leave?uid=${user.uid}`).then(d => {
+    const el = document.getElementById("leave-table");
+    if (!d.ok || !d.leaves?.length) { el.innerHTML = '<tr><td colspan="7" class="text-center text-muted" style="padding:30px">No leave requests</td></tr>'; return; }
+    el.innerHTML = d.leaves.map(l => `
+      <tr>
+        <td><span class="badge badge--indigo">${escHtml(l.leave_type?.toUpperCase())}</span></td>
+        <td>${fmtDate(l.start_date)}</td><td>${fmtDate(l.end_date)}</td>
+        <td>${l.days || 1}</td><td class="text-sm">${escHtml(l.reason).substring(0,50)}</td>
+        <td>${statusBadge(l.status)}</td><td class="text-xs text-muted">${fmtDate(l.created_at)}</td>
+      </tr>`).join("");
+  });
+}
+
+async function submitLeave() {
+  const start = document.getElementById("lv-start").value;
+  const end = document.getElementById("lv-end").value;
+  const reason = document.getElementById("lv-reason").value.trim();
+  if (!start || !end || !reason) { toast("All fields required", "warn"); return; }
+  const days = Math.ceil((new Date(end) - new Date(start)) / 86400000) + 1;
+  if (days < 1) { toast("End date must be after start date", "warn"); return; }
+
+  const res = await api("/api/leave", "POST", {
+    employee_uid: user.uid, employee_name: user.name,
+    leave_type: document.getElementById("lv-type").value,
+    start_date: start, end_date: end, days, reason
+  });
+  if (res.ok) { toast("Leave request submitted!", "success"); closeModal("leave-modal"); loadLeaves(); }
+  else toast(res.error || "Failed", "error");
+}
+loadLeaves();
+</script>
+{% endblock %}

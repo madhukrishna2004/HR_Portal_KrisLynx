@@ -1,13 +1,13 @@
 """
-KrisLynx LLP – HR Portal  |  firebase_config.py
+LynxPort – KrisLynx LLP Workforce Operating System
+firebase_config.py  |  Production build
 
 Supports two initialization modes:
-  1. LOCAL  – reads serviceAccountKey.json from disk (dev convenience)
-  2. RENDER – reads FIREBASE_SERVICE_ACCOUNT_JSON env var (production)
+  1. LOCAL  – reads serviceAccountKey.json from disk
+  2. RENDER – reads FIREBASE_SERVICE_ACCOUNT_JSON env var
 """
 
-import os
-import json
+import os, json
 import firebase_admin
 from firebase_admin import credentials, firestore, auth, storage
 from dotenv import load_dotenv
@@ -15,11 +15,20 @@ from dotenv import load_dotenv
 load_dotenv()
 
 COLLECTIONS = {
-    "users":         "krislynxllp_hr_users",
-    "projects":      "krislynxllp_hr_projects",
-    "tasks":         "krislynxllp_hr_tasks",
-    "eod_reports":   "krislynxllp_hr_eod_reports",
-    "activity_logs": "krislynxllp_hr_activity_logs",
+    "users":          "krislynxllp_hr_users",
+    "projects":       "krislynxllp_hr_projects",
+    "tasks":          "krislynxllp_hr_tasks",
+    "eod_reports":    "krislynxllp_hr_eod_reports",
+    "activity_logs":  "krislynxllp_hr_activity_logs",
+    "payroll":        "krislynxllp_hr_payroll",
+    "payroll_config": "krislynxllp_hr_payroll_config",
+    "notifications":  "krislynxllp_hr_notifications",
+    "mail_logs":      "krislynxllp_hr_mail_logs",
+    "mail_templates": "krislynxllp_hr_mail_templates",
+    "complaints":     "krislynxllp_hr_complaints",
+    "leave_requests": "krislynxllp_hr_leave_requests",
+    "policies":       "krislynxllp_hr_policies",
+    "onboarding":     "krislynxllp_hr_onboarding",
 }
 
 STORAGE_BUCKET = os.getenv("FIREBASE_STORAGE_BUCKET", "miyraa-59c25.appspot.com")

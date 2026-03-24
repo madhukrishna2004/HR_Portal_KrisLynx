@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+{% block title %}ID Card{% endblock %}
+{% block page_title %}Employee ID Card{% endblock %}
+{% block page_sub %}View and download your identity card{% endblock %}
+{% block sidebar_key %}idcard{% endblock %}
+
+{% block content %}
+<div style="max-width:500px;margin:0 auto" class="fade-up">
+  <div class="idcard-preview" id="idcard">
+    <div class="idcard-logo">KrisLynx LLP</div>
+    <div class="idcard-photo" id="id-photo"></div>
+    <div class="idcard-name" id="id-name">Loading...</div>
+    <div class="idcard-role" id="id-role">—</div>
+    <div class="idcard-detail" id="id-empid">Employee ID: —</div>
+    <div class="idcard-detail" id="id-dept">Department: —</div>
+    <div class="idcard-detail" id="id-email">Email: —</div>
+    <div class="idcard-detail" id="id-joined">Joined: —</div>
+    <div style="margin-top:20px;padding-top:14px;border-top:1px solid rgba(255,255,255,0.15);font-size:11px;opacity:0.5;text-align:center">
+      LynxPort — Workforce Operating System
+    </div>
+  </div>
+
+  <div class="d-flex justify-between mt-16">
+    <button class="btn btn--secondary" onclick="window.print()">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+      Print Card
+    </button>
+    <button class="btn btn--primary" onclick="downloadCard()">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+      Download
+    </button>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+if (!requireAuth()) throw "auth";
+const user = Session.profile();
+document.getElementById("id-name").textContent = user.name || "Employee";
+document.getElementById("id-role").textContent = user.position || user.role || "Team Member";
+document.getElementById("id-empid").textContent = `Employee ID: ${user.employee_id || '—'}`;
+document.getElementById("id-dept").textContent = `Department: ${user.department || '—'}`;
+document.getElementById("id-email").textContent = `Email: ${user.email || '—'}`;
+document.getElementById("id-joined").textContent = `Joined: ${fmtDate(user.join_date)}`;
+document.getElementById("id-photo").textContent = initials(user.name);
+
+function downloadCard() {
+  toast("Use Print → Save as PDF to download your ID card", "info");
+  window.print();
+}
+</script>
+{% endblock %}

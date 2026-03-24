@@ -1,183 +1,96 @@
 {% extends "base.html" %}
 {% block title %}EOD Reports{% endblock %}
 {% block page_title %}EOD Reports{% endblock %}
-{% block page_sub %}<span id="eod-count-label">Loading…</span>{% endblock %}
+{% block page_sub %}Daily end-of-day submissions{% endblock %}
 {% block sidebar_key %}eod{% endblock %}
 
 {% block topbar_actions %}
-<button id="emp-submit-btn" class="btn btn--primary" onclick="openModal('modal-submit-eod')">
-  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-  Submit EOD
-</button>
+<span id="eod-btn-slot"></span>
 {% endblock %}
 
 {% block content %}
-<!-- HR filters -->
-<div id="hr-filters" class="filters" style="display:none">
-  <div>
-    <div class="form-label" style="margin-bottom:4px">Filter by date</div>
-    <input id="f-date" class="form-control" type="date" style="width:160px" onchange="loadReports()"/>
-  </div>
-  <div>
-    <div class="form-label" style="margin-bottom:4px">Filter by employee</div>
-    <select id="f-emp" class="form-control" style="width:200px" onchange="loadReports()"><option value="">All Employees</option></select>
-  </div>
-  <button class="btn btn--ghost btn--sm" style="align-self:flex-end" onclick="clearFilters()">Clear</button>
-  <div class="search-wrap" style="margin-left:auto;align-self:flex-end">
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-    <input id="search" class="search-input" placeholder="Search reports…" oninput="renderReports()"/>
-  </div>
-</div>
-
-<div id="reports-grid" class="proj-grid"></div>
-
-<!-- Submit EOD modal -->
-<div id="modal-submit-eod" class="modal">
-  <div class="modal__box" style="max-width:560px">
-    <div class="modal__header">
-      <div><div class="modal__title">Submit EOD Report</div><div class="modal__sub" id="eod-modal-date"></div></div>
-      <button class="modal__close" onclick="closeModal('modal-submit-eod')"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+<div class="card fade-up">
+  <div class="card__header">
+    <div class="card__title">Recent Reports</div>
+    <div class="d-flex gap-12">
+      <input type="date" class="form-input" id="eod-date" style="width:160px" onchange="loadEOD()">
     </div>
-    <div class="modal__body">
-      <div class="form-group"><label class="form-label">Tasks Completed Today *</label>
-        <textarea id="eod-tasks" class="form-control" rows="5" placeholder="• Completed API integration&#10;• Reviewed and merged PR #42&#10;• Fixed responsive layout bug"></textarea>
-      </div>
-      <div class="form-grid form-grid--2">
-        <div class="form-group"><label class="form-label">Hours Worked</label><input id="eod-time" class="form-control" type="number" min="1" max="14" placeholder="8"/></div>
-        <div class="form-group"><label class="form-label">Blockers / Challenges</label><input id="eod-challenges" class="form-control" placeholder="Any blockers today?"/></div>
-      </div>
-      <div class="form-group"><label class="form-label">Plan for Tomorrow</label><textarea id="eod-tomorrow" class="form-control" rows="2" placeholder="Tomorrow's focus…"></textarea></div>
-      <div class="form-group">
-        <label class="form-label">Attachment (optional)</label>
-        <div class="upload-zone" onclick="document.getElementById('eod-file').click()">
-          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-          <div class="upload-zone__label">Click to upload</div>
-          <div class="upload-zone__sub" id="upload-file-label">PDF, DOC, PNG, JPG (max 10 MB)</div>
-        </div>
-        <input id="eod-file" type="file" class="hidden" accept=".pdf,.doc,.docx,.png,.jpg"
-               onchange="document.getElementById('upload-file-label').textContent=this.files[0]?.name||'PDF, DOC, PNG, JPG (max 10 MB)'"/>
-      </div>
-      <div id="eod-error"   class="alert alert--error   hidden"></div>
-      <div id="eod-success" class="alert alert--success hidden">✓ EOD report submitted successfully!</div>
-    </div>
-    <div class="modal__footer">
-      <button class="btn btn--ghost" onclick="closeModal('modal-submit-eod')">Cancel</button>
-      <button id="eod-btn" class="btn btn--primary" onclick="submitEOD()">Submit Report</button>
+  </div>
+  <div class="card__body">
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Employee</th><th>Date</th><th>Tasks Completed</th><th>Time Spent</th><th>Submitted</th></tr></thead>
+        <tbody id="eod-tbody"><tr><td colspan="5"><div class="loading-spinner"></div></td></tr></tbody>
+      </table>
     </div>
   </div>
 </div>
 
-<!-- View report modal -->
-<div id="modal-view-report" class="modal">
-  <div class="modal__box" style="max-width:520px">
-    <div class="modal__header">
-      <div><div class="modal__title" id="vr-name">EOD Report</div><div class="modal__sub" id="vr-date"></div></div>
-      <button class="modal__close" onclick="closeModal('modal-view-report')"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+<!-- Submit EOD Modal -->
+<div class="modal-overlay" id="eod-modal">
+  <div class="modal-box">
+    <div class="modal-header"><h3>Submit EOD Report</h3><button class="modal-close" onclick="closeModal('eod-modal')">&times;</button></div>
+    <div class="modal-body">
+      <div class="form-group"><label class="form-label">Tasks Completed</label><textarea class="form-textarea" id="e-tasks" rows="4" placeholder="List tasks completed today..."></textarea></div>
+      <div class="form-row mb-16">
+        <div class="form-group"><label class="form-label">Time Spent</label><input class="form-input" id="e-time" placeholder="e.g., 8 hours"></div>
+        <div class="form-group"><label class="form-label">Date</label><input class="form-input" id="e-date" type="date"></div>
+      </div>
+      <div class="form-group"><label class="form-label">Challenges</label><textarea class="form-textarea" id="e-challenges" rows="2" placeholder="Any blockers or challenges?"></textarea></div>
+      <div class="form-group"><label class="form-label">Tomorrow's Plan</label><textarea class="form-textarea" id="e-plan" rows="2" placeholder="What do you plan to work on?"></textarea></div>
     </div>
-    <div class="modal__body" id="vr-body"></div>
-    <div class="modal__footer"><button class="btn btn--ghost" onclick="closeModal('modal-view-report')">Close</button></div>
+    <div class="modal-footer">
+      <button class="btn btn--secondary" onclick="closeModal('eod-modal')">Cancel</button>
+      <button class="btn btn--primary" onclick="submitEOD()">Submit Report</button>
+    </div>
   </div>
 </div>
 {% endblock %}
 
 {% block scripts %}
 <script>
-requireAuth();
-const isHR=Session.isHR(); const user=Session.profile();
-const today=new Date().toISOString().split("T")[0];
-document.getElementById("eod-modal-date").textContent=new Date().toLocaleDateString("en-IN",{weekday:"long",day:"numeric",month:"long"});
-if(document.getElementById("f-date")) document.getElementById("f-date").value=today;
-if(isHR){document.getElementById("hr-filters").style.display="flex";document.getElementById("emp-submit-btn").style.display="none";loadEmpsForFilter();}
+if (!requireAuth()) throw "auth";
+const isHR = Session.isHR();
+const user = Session.profile();
 
-let allReports=[];
-
-async function loadEmpsForFilter(){
-  const d=await api("/api/employees"); const sel=document.getElementById("f-emp");
-  (d.employees||[]).forEach(e=>{const o=document.createElement("option");o.value=e.uid;o.textContent=e.name||e.email;sel.appendChild(o);});
+// Inject employee-only button
+if (!isHR) {
+  document.getElementById("eod-btn-slot").innerHTML = '<button class="btn btn--primary" onclick="openModal(\'eod-modal\')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg> Submit EOD</button>';
 }
 
-async function loadReports(){
-  const params=[];
-  if(!isHR){params.push(`uid=${user.uid}`);}
-  else{const date=document.getElementById("f-date")?.value;const emp=document.getElementById("f-emp")?.value;if(date)params.push(`date=${date}`);if(emp)params.push(`uid=${emp}`);}
-  const d=await api(`/api/eod${params.length?"?"+params.join("&"):""}}`);
-  allReports=d.reports||[]; renderReports();
+document.getElementById("e-date").value = new Date().toISOString().split("T")[0];
+
+function loadEOD() {
+  const date = document.getElementById("eod-date").value;
+  const url = isHR ? `/api/eod${date ? '?date='+date : ''}` : `/api/eod?uid=${user.uid}${date ? '&date='+date : ''}`;
+  api(url).then(d => {
+    const el = document.getElementById("eod-tbody");
+    if (!d.ok || !d.reports?.length) { el.innerHTML = '<tr><td colspan="5" class="text-center text-muted" style="padding:30px">No reports found</td></tr>'; return; }
+    el.innerHTML = d.reports.map(r => `
+      <tr>
+        <td><div class="d-flex items-center gap-8">${avatar(r.employee_name,28)}<span style="font-weight:600">${escHtml(r.employee_name)}</span></div></td>
+        <td>${fmtDate(r.date)}</td>
+        <td class="text-sm" style="max-width:300px">${escHtml(r.tasks_completed).substring(0,120)}</td>
+        <td>${escHtml(r.time_spent||'—')}</td>
+        <td class="text-xs text-muted">${r.time_label || timeAgo(r.submitted_at)}</td>
+      </tr>`).join("");
+  });
 }
 
-function clearFilters(){document.getElementById("f-date").value=today;document.getElementById("f-emp").value="";loadReports();}
-
-function renderReports(){
-  const q=document.getElementById("search")?.value.toLowerCase()||"";
-  let list=allReports;
-  if(q) list=list.filter(r=>(r.employee_name||"").toLowerCase().includes(q)||(r.tasks_completed||"").toLowerCase().includes(q));
-  document.getElementById("eod-count-label").textContent=`${list.length} report${list.length!==1?"s":""}`;
-  const grid=document.getElementById("reports-grid");
-  if(!list.length){grid.innerHTML=`<div class="empty-state" style="grid-column:1/-1"><svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg><div class="empty-state__title">No EOD reports found</div><div class="empty-state__sub">${isHR?"Adjust filters":"Submit your first EOD report!"}</div></div>`;return;}
-  grid.innerHTML=list.map((r,i)=>`
-    <div class="eod-card fade-up" style="animation-delay:${i*.04}s;cursor:pointer" onclick='viewReport(${JSON.stringify(JSON.stringify(r))})'>
-      <div class="eod-card__header">
-        ${avatar(r.employee_name||"?",36,pickGrad(r.employee_id||""))}
-        <div style="flex:1;min-width:0">
-          <div class="eod-card__name">${escHtml(r.employee_name||"—")}</div>
-          <div style="display:flex;align-items:center;gap:8px;margin-top:2px">
-            <span style="font-size:11.5px;color:var(--text-muted);font-family:var(--mono)">${fmtDate(r.date)}</span>
-            <span class="badge badge--green" style="font-size:10px">${escHtml(r.time_label||"—")}</span>
-          </div>
-        </div>
-        <button class="btn btn--ghost btn--sm btn--icon"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></button>
-      </div>
-      <div class="eod-card__tasks">${escHtml(r.tasks_completed||"—")}</div>
-      <div style="display:flex;gap:12px;font-size:11.5px;color:var(--text-muted)">
-        ${r.time_spent?`<span>⏱ ${escHtml(r.time_spent)}h worked</span>`:""}
-        ${r.attachments?.length?`<span>📎 ${r.attachments.length} file${r.attachments.length>1?"s":""}</span>`:""}
-        ${r.tomorrow_plan?`<span>📋 Plan set</span>`:""}
-      </div>
-    </div>`).join("");
+async function submitEOD() {
+  const tasks = document.getElementById("e-tasks").value.trim();
+  if (!tasks) { toast("Tasks completed is required", "warn"); return; }
+  const res = await api("/api/eod", "POST", {
+    employee_id: user.uid, employee_name: user.name,
+    tasks_completed: tasks,
+    time_spent: document.getElementById("e-time").value.trim(),
+    date: document.getElementById("e-date").value,
+    challenges: document.getElementById("e-challenges").value.trim(),
+    tomorrow_plan: document.getElementById("e-plan").value.trim(),
+  });
+  if (res.ok) { toast("EOD submitted!", "success"); closeModal("eod-modal"); loadEOD(); }
+  else toast(res.error || "Failed", "error");
 }
-
-function viewReport(jsonStr){
-  const r=JSON.parse(jsonStr);
-  document.getElementById("vr-name").textContent=r.employee_name||"EOD Report";
-  document.getElementById("vr-date").textContent=`${fmtDate(r.date)} at ${r.time_label||"—"}`;
-  document.getElementById("vr-body").innerHTML=`
-    <div style="background:var(--surface-2);border-radius:10px;padding:16px;margin-bottom:14px">
-      <div class="form-label" style="margin-bottom:8px">Tasks Completed</div>
-      <div style="font-size:13.5px;line-height:1.6;white-space:pre-line">${escHtml(r.tasks_completed||"—")}</div>
-    </div>
-    ${r.time_spent?`<div style="display:inline-flex;align-items:center;gap:8px;background:var(--indigo-soft);border:1px solid var(--border-hi);border-radius:8px;padding:8px 14px;font-size:13px;margin-bottom:14px"><strong>Hours worked:</strong> ${escHtml(r.time_spent)}h</div>`:""}
-    ${r.challenges?`<div style="background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.2);border-radius:10px;padding:14px;margin-bottom:14px"><div class="form-label" style="color:#f59e0b;margin-bottom:6px">Challenges / Blockers</div><div style="font-size:13.5px">${escHtml(r.challenges)}</div></div>`:""}
-    ${r.tomorrow_plan?`<div style="background:rgba(16,185,129,.08);border:1px solid rgba(16,185,129,.2);border-radius:10px;padding:14px;margin-bottom:14px"><div class="form-label" style="color:#10b981;margin-bottom:6px">Plan for Tomorrow</div><div style="font-size:13.5px">${escHtml(r.tomorrow_plan)}</div></div>`:""}
-    ${r.attachments?.length?`<div><div class="form-label" style="margin-bottom:8px">Attachments</div>${r.attachments.map(a=>`<a href="${a.url}" target="_blank" rel="noopener noreferrer" style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--indigo-hi);padding:8px 0;border-bottom:1px solid var(--border)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>${escHtml(a.name)}</a>`).join("")}</div>`:""}`;
-  openModal("modal-view-report");
-}
-
-async function submitEOD(){
-  const tasks=document.getElementById("eod-tasks").value.trim();
-  const errEl=document.getElementById("eod-error"); const sucEl=document.getElementById("eod-success");
-  errEl.classList.add("hidden"); sucEl.classList.add("hidden");
-  if(!tasks){errEl.textContent="Please describe your tasks for today.";errEl.classList.remove("hidden");return;}
-  const btn=document.getElementById("eod-btn"); btn.disabled=true; btn.textContent="Submitting…";
-  try{
-    let attachments=[];
-    const fi=document.getElementById("eod-file");
-    if(fi.files[0]){
-      const fd=new FormData(); fd.append("file",fi.files[0]); fd.append("uid",user.uid||"unknown");
-      const r=await fetch("/api/upload",{method:"POST",body:fd}); const u=await r.json();
-      if(u.ok) attachments=[{url:u.url,name:u.name}];
-    }
-    const d=await api("/api/eod","POST",{employee_id:user.uid||"",employee_name:user.name||user.email||"Unknown",
-      date:today,tasks_completed:tasks,time_spent:document.getElementById("eod-time").value,
-      challenges:document.getElementById("eod-challenges").value,tomorrow_plan:document.getElementById("eod-tomorrow").value,attachments});
-    if(d.ok){
-      sucEl.classList.remove("hidden");
-      ["eod-tasks","eod-time","eod-challenges","eod-tomorrow"].forEach(id=>document.getElementById(id).value="");
-      fi.value=""; document.getElementById("upload-file-label").textContent="PDF, DOC, PNG, JPG (max 10 MB)";
-      setTimeout(()=>closeModal("modal-submit-eod"),1500); loadReports();
-    } else{errEl.textContent=d.error||"Submission failed.";errEl.classList.remove("hidden");}
-  } catch(e){errEl.textContent=e.message;errEl.classList.remove("hidden");}
-  btn.disabled=false; btn.textContent="Submit Report";
-}
-
-loadReports();
+loadEOD();
 </script>
 {% endblock %}
